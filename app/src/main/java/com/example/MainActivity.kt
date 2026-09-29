@@ -233,7 +233,8 @@ fun MainApp(
                         onNextMonth = { viewModel.nextMonth() },
                         onResetCurrentMonth = { viewModel.goToCurrentMonth() },
                         onNavigateToTransactions = { currentTab = MainTab.LANCAMENTOS },
-                        onEditRevenue = { isRevenueSheetVisible = true }
+                        onEditRevenue = { isRevenueSheetVisible = true },
+                        onToggleSumWithOtherMonths = { viewModel.toggleSumWithOtherMonths(it) }
                     )
                 }
                 MainTab.LANCAMENTOS -> {

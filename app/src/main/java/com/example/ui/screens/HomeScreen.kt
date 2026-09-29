@@ -31,6 +31,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -64,6 +65,7 @@ fun HomeScreen(
     onResetCurrentMonth: () -> Unit,
     onNavigateToTransactions: () -> Unit,
     onEditRevenue: () -> Unit = {},
+    onToggleSumWithOtherMonths: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     // Gastos por Categoria (Regra 5)
@@ -349,8 +351,11 @@ fun HomeScreen(
             }
         }
 
-        // 5. SALDO DISPONÍVEL (Simplificado: Título e Valor)
+        // 5. SALDO DISPONÍVEL (Calculado mês a mês, podendo somar com o saldo de outros meses)
         item {
+            val isSumming = summary.isAccumulatingWithOtherMonths
+            val displayedAmount = if (isSumming) summary.availableBalanceTotal else summary.availableBalanceMonth
+
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -390,13 +395,55 @@ fun HomeScreen(
 
                     Spacer(modifier = Modifier.height(6.dp))
 
-                    // Apenas o valor acumulado, sem o texto "Total acumulado"
                     Text(
-                        text = CurrencyUtils.formatCurrency(summary.emergencyFundAccumulated),
+                        text = CurrencyUtils.formatCurrency(displayedAmount),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.ExtraBold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Deste mês: ${CurrencyUtils.formatCurrency(summary.availableBalanceMonth)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Outros meses: ${CurrencyUtils.formatCurrency(summary.availableBalancePreviousMonths)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.clickable { onToggleSumWithOtherMonths(!isSumming) }
+                        ) {
+                            Text(
+                                text = "Somar outros meses",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (isSumming) EmergencyTeal else MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = if (isSumming) FontWeight.Bold else FontWeight.Medium
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Switch(
+                                checked = isSumming,
+                                onCheckedChange = { onToggleSumWithOtherMonths(it) },
+                                modifier = Modifier.testTag("switch_somar_outros_meses")
+                            )
+                        }
+                    }
                 }
             }
         }

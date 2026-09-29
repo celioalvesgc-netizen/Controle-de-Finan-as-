@@ -96,4 +96,23 @@ class ExampleRobolectricTest {
     com.example.util.ExpenseNotificationManager.createNotificationChannel(context)
     com.example.util.ExpenseNotificationManager.cancelNotificationForExpense(context, 123L)
   }
+
+  @Test
+  fun `test finance summary available balance month by month and accumulation`() {
+    val ym = java.time.YearMonth.of(2026, 10)
+    val summary = com.example.ui.viewmodel.FinanceSummary(
+      monthYear = ym,
+      availableBalanceMonth = 300.0,
+      availableBalancePreviousMonths = 500.0,
+      availableBalanceTotal = 800.0,
+      isAccumulatingWithOtherMonths = true
+    )
+    assertEquals(300.0, summary.availableBalanceMonth, 0.001)
+    assertEquals(500.0, summary.availableBalancePreviousMonths, 0.001)
+    assertEquals(800.0, summary.availableBalanceTotal, 0.001)
+    assertEquals(true, summary.isAccumulatingWithOtherMonths)
+
+    val nonAccumulating = summary.copy(isAccumulatingWithOtherMonths = false)
+    assertEquals(false, nonAccumulating.isAccumulatingWithOtherMonths)
+  }
 }

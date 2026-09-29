@@ -43,7 +43,11 @@ data class FinanceSummary(
     val totalPending: Double = 0.0,
     val totalOverdue: Double = 0.0,
     val emergencyFundMonth: Double = 0.0,
-    val emergencyFundAccumulated: Double = 0.0
+    val emergencyFundAccumulated: Double = 0.0,
+    val availableBalanceMonth: Double = 0.0,
+    val availableBalancePreviousMonths: Double = 0.0,
+    val availableBalanceTotal: Double = 0.0,
+    val isAccumulatingWithOtherMonths: Boolean = true
 )
 
 class FinanceViewModel(
@@ -52,6 +56,13 @@ class FinanceViewModel(
 
     private val _selectedYearMonth = MutableStateFlow(YearMonth.now())
     val selectedYearMonth: StateFlow<YearMonth> = _selectedYearMonth.asStateFlow()
+
+    private val _sumWithOtherMonths = MutableStateFlow(true)
+    val sumWithOtherMonths: StateFlow<Boolean> = _sumWithOtherMonths.asStateFlow()
+
+    fun toggleSumWithOtherMonths(enabled: Boolean? = null) {
+        _sumWithOtherMonths.value = enabled ?: !_sumWithOtherMonths.value
+    }
 
     private val _expenseFilter = MutableStateFlow(ExpenseFilter.TODAS)
     val expenseFilter: StateFlow<ExpenseFilter> = _expenseFilter.asStateFlow()
@@ -108,10 +119,11 @@ class FinanceViewModel(
         currentMonthData,
         allMonthlyRevenues,
         allExpenses,
-        settings
-    ) { monthData, allMonthlyRevs, allExp, sett ->
+        settings,
+        _sumWithOtherMonths
+    ) { monthData, allMonthlyRevs, allExp, sett, isSumming ->
         val (ym, monthlyRev, expenses) = monthData
-        calculateSummary(ym, monthlyRev, expenses, allMonthlyRevs, allExp, sett)
+        calculateSummary(ym, monthlyRev, expenses, allMonthlyRevs, allExp, sett, isSumming)
     }.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5000),
@@ -124,7 +136,8 @@ class FinanceViewModel(
         expenses: List<Expense>,
         allMonthlyRevs: List<MonthlyRevenue>,
         allExp: List<Expense>,
-        settings: AppSettings
+        settings: AppSettings,
+        isSummingWithOtherMonths: Boolean
     ): FinanceSummary {
         val salary = monthlyRev.salary
         val extraIncome = monthlyRev.extraIncome
@@ -166,15 +179,25 @@ class FinanceViewModel(
             }
         }
 
-        // Emergency fund for current selected month:
-        val emergencyMonth = if (totalRevenue > 0) {
+        // Saldo disponível calculado para o mês selecionado (mês a mês):
+        val availableMonth = if (totalRevenue > 0) {
             max(0.0, totalRevenue - investmentAllocated - leisureLimit - generalExpenses)
         } else {
             0.0
         }
 
-        // Calculate accumulated emergency fund across all historical months recorded
-        val accumulated = calculateAccumulatedEmergencyFund(allMonthlyRevs, allExp, invPercent, leisurePercent)
+        // Saldo disponível acumulado dos meses anteriores ao mês selecionado:
+        val currentMonthStr = yearMonth.toString()
+        val previousMonthsBalance = calculatePreviousMonthsAvailableBalance(
+            currentMonthStr = currentMonthStr,
+            allMonthlyRevs = allMonthlyRevs,
+            allExp = allExp,
+            invPercent = invPercent,
+            leisurePercent = leisurePercent
+        )
+
+        val totalAccumulated = previousMonthsBalance + availableMonth
+        val effectiveAccumulated = if (isSummingWithOtherMonths) totalAccumulated else availableMonth
 
         return FinanceSummary(
             monthYear = yearMonth,
@@ -194,12 +217,17 @@ class FinanceViewModel(
             totalPaid = totalPaid,
             totalPending = totalPending,
             totalOverdue = totalOverdue,
-            emergencyFundMonth = emergencyMonth,
-            emergencyFundAccumulated = accumulated
+            emergencyFundMonth = availableMonth,
+            emergencyFundAccumulated = effectiveAccumulated,
+            availableBalanceMonth = availableMonth,
+            availableBalancePreviousMonths = previousMonthsBalance,
+            availableBalanceTotal = totalAccumulated,
+            isAccumulatingWithOtherMonths = isSummingWithOtherMonths
         )
     }
 
-    private fun calculateAccumulatedEmergencyFund(
+    private fun calculatePreviousMonthsAvailableBalance(
+        currentMonthStr: String,
         allMonthlyRevs: List<MonthlyRevenue>,
         allExp: List<Expense>,
         invPercent: Double,
@@ -207,10 +235,13 @@ class FinanceViewModel(
     ): Double {
         val revByMonth = allMonthlyRevs.associate { it.month to it.totalRevenue }
         val expByMonth = allExp.groupBy { it.dueDate.take(7) }
-        val allMonthKeys = (revByMonth.keys + expByMonth.keys).filter { it.isNotBlank() }.distinct()
+        val previousMonthKeys = (revByMonth.keys + expByMonth.keys)
+            .filter { it.isNotBlank() && it < currentMonthStr }
+            .distinct()
+            .sorted()
 
-        var totalAccumulated = 0.0
-        for (m in allMonthKeys) {
+        var accumulated = 0.0
+        for (m in previousMonthKeys) {
             val rev = revByMonth[m] ?: 0.0
             if (rev > 0) {
                 val inv = rev * (invPercent / 100.0)
@@ -219,10 +250,10 @@ class FinanceViewModel(
                     ?.filter { !it.category.equals("Lazer", ignoreCase = true) }
                     ?.sumOf { it.amount } ?: 0.0
                 val sobra = max(0.0, rev - inv - leisureLim - generalExp)
-                totalAccumulated += sobra
+                accumulated += sobra
             }
         }
-        return totalAccumulated
+        return accumulated
     }
 
     fun setFilter(filter: ExpenseFilter) {
