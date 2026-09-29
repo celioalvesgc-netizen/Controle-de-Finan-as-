@@ -1,0 +1,6 @@
+{
+  "name": "Meu Financeiro",
+  "description": "Aplicativo de controle financeiro pessoal completo, com controle de despesas pagas/pendentes/vencidas, receitas, investimentos, lazer e fundo de emergência.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
