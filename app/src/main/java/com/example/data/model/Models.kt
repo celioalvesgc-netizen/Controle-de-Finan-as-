@@ -17,7 +17,9 @@ data class MonthlyRevenue(
     @PrimaryKey
     val month: String, // Format: YYYY-MM
     val salary: Double = 0.0,
-    val extraIncome: Double = 0.0
+    val extraIncome: Double = 0.0,
+    val investmentPercentage: Double? = null,
+    val leisurePercentage: Double? = null
 ) {
     val totalRevenue: Double
         get() = salary + extraIncome
@@ -53,7 +55,8 @@ data class AppSettings(
     val investmentPercentage: Double = 10.0,
     val leisurePercentage: Double = 10.0,
     val isDarkMode: Boolean = false,
-    val notificationsEnabled: Boolean = false
+    val notificationsEnabled: Boolean = false,
+    val sumWithOtherMonths: Boolean = true
 )
 
 enum class PaymentStatus {

@@ -25,7 +25,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Delete
@@ -33,6 +36,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.NotificationsOff
+import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.SportsEsports
@@ -44,6 +48,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -67,6 +72,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.data.model.AppSettings
 import com.example.data.model.Category
+import com.example.data.model.MonthlyRevenue
 import com.example.ui.theme.EmergencyTeal
 import com.example.ui.theme.EmergencyTealBg
 import com.example.ui.theme.InvestmentBlue
@@ -76,14 +82,20 @@ import com.example.util.ExpenseNotificationManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.time.YearMonth
+import java.time.format.TextStyle
+import java.util.Locale
 import kotlin.math.roundToInt
 
 @Composable
 fun SettingsScreen(
     settings: AppSettings,
+    allMonthlyRevenues: List<MonthlyRevenue> = emptyList(),
+    selectedYearMonth: YearMonth = YearMonth.now(),
     categories: List<Category>,
     emergencyFundAccumulated: Double,
-    onSaveSettings: (investmentPercent: Double, leisurePercent: Double) -> Unit,
+    onSaveMonthPercentages: (month: String, investmentPercent: Double?, leisurePercent: Double?) -> Unit = { _, _, _ -> },
+    onSaveDefaultSettings: (investmentPercent: Double, leisurePercent: Double) -> Unit,
     onAddCategory: (String) -> Unit,
     onDeleteCategory: (Category) -> Unit,
     onToggleTheme: (Boolean) -> Unit = {},
@@ -105,15 +117,35 @@ fun SettingsScreen(
             ExpenseNotificationManager.cancelReminder(context)
         }
     }
-    var invSlider by remember(settings.investmentPercentage) {
+
+    var targetYearMonth by remember(selectedYearMonth) { mutableStateOf(selectedYearMonth) }
+    val targetMonthStr = targetYearMonth.toString()
+    val targetRev = allMonthlyRevenues.find { it.month == targetMonthStr }
+    val isCustomForMonth = targetRev?.investmentPercentage != null || targetRev?.leisurePercentage != null
+
+    val currentMonthInv = targetRev?.investmentPercentage ?: settings.investmentPercentage
+    val currentMonthLeisure = targetRev?.leisurePercentage ?: settings.leisurePercentage
+
+    var monthInvSlider by remember(targetMonthStr, currentMonthInv) {
+        mutableFloatStateOf(currentMonthInv.toFloat())
+    }
+    var monthLeisureSlider by remember(targetMonthStr, currentMonthLeisure) {
+        mutableFloatStateOf(currentMonthLeisure.toFloat())
+    }
+
+    var defaultInvSlider by remember(settings.investmentPercentage) {
         mutableFloatStateOf(settings.investmentPercentage.toFloat())
     }
-    var leisureSlider by remember(settings.leisurePercentage) {
+    var defaultLeisureSlider by remember(settings.leisurePercentage) {
         mutableFloatStateOf(settings.leisurePercentage.toFloat())
     }
 
     var newCategoryText by remember { mutableStateOf("") }
     var showAddCategoryDialog by remember { mutableStateOf(false) }
+
+    val monthName = targetYearMonth.month.getDisplayName(TextStyle.FULL, Locale("pt", "BR"))
+        .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("pt", "BR")) else it.toString() }
+    val formattedTargetMonth = "$monthName de ${targetYearMonth.year}"
 
     LazyColumn(
         modifier = modifier
@@ -442,18 +474,95 @@ fun SettingsScreen(
             }
         }
 
-        // Percentual de Investimento
+        // 3. SEÇÃO: PERCENTUAIS POR MÊS (Individual por Mês/Ano)
         item {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .testTag("card_config_investimento"),
+                    .testTag("card_month_percentages_config"),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "PERCENTUAIS POR MÊS",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        letterSpacing = 0.5.sp
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Configure percentuais individuais para cada mês ou use os padrões.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Navegador de Mês
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(
+                                onClick = { targetYearMonth = targetYearMonth.minusMonths(1) },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Mês anterior",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable { targetYearMonth = YearMonth.now() }
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = formattedTargetMonth,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = if (isCustomForMonth) "Personalizado para este mês" else "Usando percentuais padrão",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = if (isCustomForMonth) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                            IconButton(
+                                onClick = { targetYearMonth = targetYearMonth.plusMonths(1) },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                    contentDescription = "Próximo mês",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Investimento do mês
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -462,7 +571,7 @@ fun SettingsScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
                                 modifier = Modifier
-                                    .size(32.dp)
+                                    .size(30.dp)
                                     .background(InvestmentBlue.copy(alpha = 0.12f), CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
@@ -470,63 +579,43 @@ fun SettingsScreen(
                                     imageVector = Icons.Default.Savings,
                                     contentDescription = null,
                                     tint = InvestmentBlue,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(16.dp)
                                 )
                             }
-                            Spacer(modifier = Modifier.width(10.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Destinar para Investimento",
-                                style = MaterialTheme.typography.titleMedium,
+                                text = "Investimento ($monthName)",
+                                style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Bold
                             )
                         }
 
                         Text(
-                            text = "${invSlider.roundToInt()}%",
-                            style = MaterialTheme.typography.titleLarge,
+                            text = "${monthInvSlider.roundToInt()}%",
+                            style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.ExtraBold,
                             color = InvestmentBlue
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Percentual da receita mensal separado automaticamente para investimentos.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
                     Slider(
-                        value = invSlider,
+                        value = monthInvSlider,
                         onValueChange = {
-                            invSlider = it
-                            onSaveSettings(it.toDouble(), leisureSlider.toDouble())
+                            monthInvSlider = it
+                            onSaveMonthPercentages(targetMonthStr, it.toDouble(), monthLeisureSlider.toDouble())
                         },
                         valueRange = 0f..50f,
                         steps = 49,
                         colors = SliderDefaults.colors(
                             thumbColor = InvestmentBlue,
                             activeTrackColor = InvestmentBlue
-                        )
+                        ),
+                        modifier = Modifier.testTag("slider_investimento_mes")
                     )
-                }
-            }
-        }
 
-        // Percentual de Lazer
-        item {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("card_config_lazer"),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Lazer do mês
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -535,7 +624,7 @@ fun SettingsScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
                                 modifier = Modifier
-                                    .size(32.dp)
+                                    .size(30.dp)
                                     .background(LeisurePurple.copy(alpha = 0.12f), CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
@@ -543,46 +632,161 @@ fun SettingsScreen(
                                     imageVector = Icons.Default.SportsEsports,
                                     contentDescription = null,
                                     tint = LeisurePurple,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(16.dp)
                                 )
                             }
-                            Spacer(modifier = Modifier.width(10.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Limite para Lazer",
-                                style = MaterialTheme.typography.titleMedium,
+                                text = "Lazer ($monthName)",
+                                style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Bold
                             )
                         }
 
                         Text(
-                            text = "${leisureSlider.roundToInt()}%",
-                            style = MaterialTheme.typography.titleLarge,
+                            text = "${monthLeisureSlider.roundToInt()}%",
+                            style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.ExtraBold,
                             color = LeisurePurple
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Percentual da receita mensal que define o teto para gastos de diversão e lazer.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
                     Slider(
-                        value = leisureSlider,
+                        value = monthLeisureSlider,
                         onValueChange = {
-                            leisureSlider = it
-                            onSaveSettings(invSlider.toDouble(), it.toDouble())
+                            monthLeisureSlider = it
+                            onSaveMonthPercentages(targetMonthStr, monthInvSlider.toDouble(), it.toDouble())
                         },
                         valueRange = 0f..50f,
                         steps = 49,
                         colors = SliderDefaults.colors(
                             thumbColor = LeisurePurple,
                             activeTrackColor = LeisurePurple
+                        ),
+                        modifier = Modifier.testTag("slider_lazer_mes")
+                    )
+
+                    if (isCustomForMonth) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedButton(
+                            onClick = {
+                                onSaveMonthPercentages(targetMonthStr, null, null)
+                                monthInvSlider = settings.investmentPercentage.toFloat()
+                                monthLeisureSlider = settings.leisurePercentage.toFloat()
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("btn_reset_month_percentages"),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Icon(Icons.Default.RestartAlt, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Restaurar padrão para $monthName (${defaultInvSlider.roundToInt()}% / ${defaultLeisureSlider.roundToInt()}%)",
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // 4. SEÇÃO: PERCENTUAIS PADRÃO (Para novos meses)
+        item {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("card_default_percentages_config"),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "PERCENTUAIS PADRÃO (NOVOS MESES)",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        letterSpacing = 0.5.sp
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Valores aplicados automaticamente aos meses que ainda não possuem percentuais personalizados.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Padrão Investimento
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Investimento Padrão",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold
                         )
+                        Text(
+                            text = "${defaultInvSlider.roundToInt()}%",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = InvestmentBlue
+                        )
+                    }
+
+                    Slider(
+                        value = defaultInvSlider,
+                        onValueChange = {
+                            defaultInvSlider = it
+                            onSaveDefaultSettings(it.toDouble(), defaultLeisureSlider.toDouble())
+                        },
+                        valueRange = 0f..50f,
+                        steps = 49,
+                        colors = SliderDefaults.colors(
+                            thumbColor = InvestmentBlue,
+                            activeTrackColor = InvestmentBlue
+                        ),
+                        modifier = Modifier.testTag("slider_default_investimento")
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Padrão Lazer
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Lazer Padrão",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = "${defaultLeisureSlider.roundToInt()}%",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = LeisurePurple
+                        )
+                    }
+
+                    Slider(
+                        value = defaultLeisureSlider,
+                        onValueChange = {
+                            defaultLeisureSlider = it
+                            onSaveDefaultSettings(defaultInvSlider.toDouble(), it.toDouble())
+                        },
+                        valueRange = 0f..50f,
+                        steps = 49,
+                        colors = SliderDefaults.colors(
+                            thumbColor = LeisurePurple,
+                            activeTrackColor = LeisurePurple
+                        ),
+                        modifier = Modifier.testTag("slider_default_lazer")
                     )
                 }
             }

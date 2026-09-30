@@ -28,7 +28,7 @@ import kotlinx.coroutines.launch
         AppSettings::class,
         MonthlyRevenue::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -83,6 +83,14 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `app_settings` ADD COLUMN `sumWithOtherMonths` INTEGER NOT NULL DEFAULT 1")
+                db.execSQL("ALTER TABLE `monthly_revenues` ADD COLUMN `investmentPercentage` REAL DEFAULT NULL")
+                db.execSQL("ALTER TABLE `monthly_revenues` ADD COLUMN `leisurePercentage` REAL DEFAULT NULL")
+            }
+        }
+
         fun getDatabase(context: Context, scope: CoroutineScope = CoroutineScope(Dispatchers.IO)): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -90,7 +98,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "meu_financeiro_database"
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                 .fallbackToDestructiveMigration()
                 .addCallback(DatabaseCallback(scope))
                 .build()

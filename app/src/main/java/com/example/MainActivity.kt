@@ -127,6 +127,7 @@ fun MainApp(
     var currentTab by remember { mutableStateOf(MainTab.INICIO) }
     var isAddSheetVisible by remember { mutableStateOf(false) }
     var isRevenueSheetVisible by remember { mutableStateOf(false) }
+    var isPercentagesSheetVisible by remember { mutableStateOf(false) }
     var addTransactionInitialType by remember { mutableStateOf(com.example.ui.screens.TransactionType.DESPESA) }
 
     var expenseToEdit by remember { mutableStateOf<Expense?>(null) }
@@ -135,6 +136,7 @@ fun MainApp(
     val selectedYearMonth by viewModel.selectedYearMonth.collectAsStateWithLifecycle()
     val summary by viewModel.summary.collectAsStateWithLifecycle()
     val currentMonthlyRevenue by viewModel.currentMonthlyRevenue.collectAsStateWithLifecycle()
+    val allMonthlyRevenues by viewModel.allMonthlyRevenues.collectAsStateWithLifecycle()
     val currentExpenses by viewModel.currentMonthExpenses.collectAsStateWithLifecycle()
     val allExpenses by viewModel.allExpenses.collectAsStateWithLifecycle()
     val categories by viewModel.categories.collectAsStateWithLifecycle()
@@ -234,6 +236,7 @@ fun MainApp(
                         onResetCurrentMonth = { viewModel.goToCurrentMonth() },
                         onNavigateToTransactions = { currentTab = MainTab.LANCAMENTOS },
                         onEditRevenue = { isRevenueSheetVisible = true },
+                        onEditPercentages = { isPercentagesSheetVisible = true },
                         onToggleSumWithOtherMonths = { viewModel.toggleSumWithOtherMonths(it) }
                     )
                 }
@@ -270,9 +273,16 @@ fun MainApp(
                 MainTab.AJUSTES -> {
                     SettingsScreen(
                         settings = settings,
+                        allMonthlyRevenues = allMonthlyRevenues,
+                        selectedYearMonth = selectedYearMonth,
                         categories = categories,
                         emergencyFundAccumulated = summary.emergencyFundAccumulated,
-                        onSaveSettings = { inv, leisure -> viewModel.updateSettings(inv, leisure) },
+                        onSaveMonthPercentages = { month, inv, leisure ->
+                            viewModel.updateMonthlyPercentages(month, inv, leisure)
+                        },
+                        onSaveDefaultSettings = { inv, leisure ->
+                            viewModel.updateSettings(inv, leisure)
+                        },
                         onAddCategory = { viewModel.addCategory(it) },
                         onDeleteCategory = { viewModel.deleteCategory(it) },
                         onToggleTheme = { viewModel.updateTheme(it) },
@@ -281,6 +291,25 @@ fun MainApp(
                 }
             }
         }
+    }
+
+    // Modal Bottom Sheet for adjusting monthly percentages
+    if (isPercentagesSheetVisible) {
+        com.example.ui.screens.MonthlyPercentagesSheet(
+            selectedYearMonth = selectedYearMonth,
+            currentInvestmentPercent = summary.investmentPercentage,
+            currentLeisurePercent = summary.leisurePercentage,
+            defaultInvestmentPercent = settings.investmentPercentage,
+            defaultLeisurePercent = settings.leisurePercentage,
+            totalRevenue = summary.totalRevenue,
+            onSavePercentages = { inv, leisure ->
+                viewModel.updateMonthlyPercentages(selectedYearMonth.toString(), inv, leisure)
+            },
+            onResetToDefault = {
+                viewModel.resetMonthlyPercentagesToDefault(selectedYearMonth.toString())
+            },
+            onDismiss = { isPercentagesSheetVisible = false }
+        )
     }
 
     // Modal Bottom Sheet for simplified Monthly Revenue (Salário + Renda Extra)

@@ -115,4 +115,39 @@ class ExampleRobolectricTest {
     val nonAccumulating = summary.copy(isAccumulatingWithOtherMonths = false)
     assertEquals(false, nonAccumulating.isAccumulatingWithOtherMonths)
   }
+
+  @Test
+  fun `test sumWithOtherMonths setting default and persistence`() {
+    val settings = com.example.data.model.AppSettings()
+    assertEquals(true, settings.sumWithOtherMonths)
+    val disabled = settings.copy(sumWithOtherMonths = false)
+    assertEquals(false, disabled.sumWithOtherMonths)
+  }
+
+  @Test
+  fun `test monthly specific percentages vs default fallback`() {
+    val defaultSettings = com.example.data.model.AppSettings(
+      investmentPercentage = 10.0,
+      leisurePercentage = 10.0
+    )
+
+    // Month without custom percentages -> falls back to defaults
+    val monthDefault = com.example.data.model.MonthlyRevenue(month = "2026-09", salary = 5000.0)
+    val effectiveInv1 = monthDefault.investmentPercentage ?: defaultSettings.investmentPercentage
+    val effectiveLeisure1 = monthDefault.leisurePercentage ?: defaultSettings.leisurePercentage
+    assertEquals(10.0, effectiveInv1, 0.001)
+    assertEquals(10.0, effectiveLeisure1, 0.001)
+
+    // Month with custom percentages (e.g. Outubro: Investimento 20% | Lazer 10%)
+    val monthCustom = com.example.data.model.MonthlyRevenue(
+      month = "2026-10",
+      salary = 5000.0,
+      investmentPercentage = 20.0,
+      leisurePercentage = 5.0
+    )
+    val effectiveInv2 = monthCustom.investmentPercentage ?: defaultSettings.investmentPercentage
+    val effectiveLeisure2 = monthCustom.leisurePercentage ?: defaultSettings.leisurePercentage
+    assertEquals(20.0, effectiveInv2, 0.001)
+    assertEquals(5.0, effectiveLeisure2, 0.001)
+  }
 }

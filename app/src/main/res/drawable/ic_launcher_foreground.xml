@@ -3,6 +3,6 @@
     <item
         android:width="66dp"
         android:height="66dp"
-        android:drawable="@drawable/meu_financeiro_icon_1790337605831"
+        android:drawable="@drawable/meu_financeiro_minimal_icon_1790793265053"
         android:gravity="center" />
 </layer-list>

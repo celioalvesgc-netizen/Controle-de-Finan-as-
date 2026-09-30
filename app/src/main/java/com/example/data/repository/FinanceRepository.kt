@@ -32,11 +32,27 @@ class FinanceRepository(
         monthlyRevenueDao.getAllMonthlyRevenues()
 
     suspend fun saveMonthlyRevenue(month: String, salary: Double, extraIncome: Double) {
+        val existing = monthlyRevenueDao.getRevenueForMonthDirect(month)
         monthlyRevenueDao.saveMonthlyRevenue(
             MonthlyRevenue(
                 month = month,
                 salary = kotlin.math.max(0.0, salary),
-                extraIncome = kotlin.math.max(0.0, extraIncome)
+                extraIncome = kotlin.math.max(0.0, extraIncome),
+                investmentPercentage = existing?.investmentPercentage,
+                leisurePercentage = existing?.leisurePercentage
+            )
+        )
+    }
+
+    suspend fun saveMonthlyPercentages(month: String, investmentPercentage: Double?, leisurePercentage: Double?) {
+        val existing = monthlyRevenueDao.getRevenueForMonthDirect(month)
+        monthlyRevenueDao.saveMonthlyRevenue(
+            MonthlyRevenue(
+                month = month,
+                salary = existing?.salary ?: 0.0,
+                extraIncome = existing?.extraIncome ?: 0.0,
+                investmentPercentage = investmentPercentage,
+                leisurePercentage = leisurePercentage
             )
         )
     }
@@ -64,6 +80,11 @@ class FinanceRepository(
 
     suspend fun saveSettings(settings: AppSettings) {
         settingsDao.saveSettings(settings)
+    }
+
+    suspend fun updateSumWithOtherMonths(enabled: Boolean) {
+        val current = settingsDao.getSettingsDirect() ?: AppSettings()
+        settingsDao.saveSettings(current.copy(sumWithOtherMonths = enabled))
     }
 
     suspend fun addRevenue(revenue: Revenue): Long {

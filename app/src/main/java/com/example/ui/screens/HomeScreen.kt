@@ -65,6 +65,7 @@ fun HomeScreen(
     onResetCurrentMonth: () -> Unit,
     onNavigateToTransactions: () -> Unit,
     onEditRevenue: () -> Unit = {},
+    onEditPercentages: () -> Unit = {},
     onToggleSumWithOtherMonths: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -261,7 +262,11 @@ fun HomeScreen(
                 amount = summary.investmentAllocated,
                 icon = Icons.Default.Savings,
                 iconColor = InvestmentBlue,
-                subtitle = "${String.format("%.0f", summary.investmentPercentage)}% da receita destinados para investimento"
+                subtitle = "${String.format("%.0f", summary.investmentPercentage)}% da receita • Toque para ajustar",
+                modifier = Modifier
+                    .clip(RoundedCornerShape(16.dp))
+                    .clickable { onEditPercentages() }
+                    .testTag("metric_card_investimento")
             )
         }
 
@@ -270,6 +275,8 @@ fun HomeScreen(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .clickable { onEditPercentages() }
                     .testTag("card_lazer_resumo"),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -282,13 +289,20 @@ fun HomeScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "LAZER",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            letterSpacing = 0.5.sp
-                        )
+                        Column {
+                            Text(
+                                text = "LAZER",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                letterSpacing = 0.5.sp
+                            )
+                            Text(
+                                text = "${String.format("%.0f", summary.leisurePercentage)}% da receita • Toque para ajustar",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                            )
+                        }
                         Box(
                             modifier = Modifier
                                 .size(32.dp)

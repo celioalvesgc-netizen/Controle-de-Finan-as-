@@ -57,19 +57,25 @@ class FinanceViewModel(
     private val _selectedYearMonth = MutableStateFlow(YearMonth.now())
     val selectedYearMonth: StateFlow<YearMonth> = _selectedYearMonth.asStateFlow()
 
-    private val _sumWithOtherMonths = MutableStateFlow(true)
-    val sumWithOtherMonths: StateFlow<Boolean> = _sumWithOtherMonths.asStateFlow()
-
-    fun toggleSumWithOtherMonths(enabled: Boolean? = null) {
-        _sumWithOtherMonths.value = enabled ?: !_sumWithOtherMonths.value
-    }
-
     private val _expenseFilter = MutableStateFlow(ExpenseFilter.TODAS)
     val expenseFilter: StateFlow<ExpenseFilter> = _expenseFilter.asStateFlow()
 
     init {
         viewModelScope.launch {
             repository.ensureInitialData()
+        }
+    }
+
+    val settings: StateFlow<AppSettings> = repository.getSettings()
+        .flatMapLatest { s ->
+            MutableStateFlow(s ?: AppSettings(id = 1, investmentPercentage = 10.0, leisurePercentage = 10.0, sumWithOtherMonths = true))
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AppSettings())
+
+    fun toggleSumWithOtherMonths(enabled: Boolean? = null) {
+        val target = enabled ?: !settings.value.sumWithOtherMonths
+        viewModelScope.launch {
+            repository.updateSumWithOtherMonths(target)
         }
     }
 
@@ -101,12 +107,6 @@ class FinanceViewModel(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val settings: StateFlow<AppSettings> = repository.getSettings()
-        .flatMapLatest { s ->
-            MutableStateFlow(s ?: AppSettings(id = 1, investmentPercentage = 10.0, leisurePercentage = 10.0))
-        }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AppSettings())
-
     private val currentMonthData = combine(
         _selectedYearMonth,
         currentMonthlyRevenue,
@@ -119,11 +119,10 @@ class FinanceViewModel(
         currentMonthData,
         allMonthlyRevenues,
         allExpenses,
-        settings,
-        _sumWithOtherMonths
-    ) { monthData, allMonthlyRevs, allExp, sett, isSumming ->
+        settings
+    ) { monthData, allMonthlyRevs, allExp, sett ->
         val (ym, monthlyRev, expenses) = monthData
-        calculateSummary(ym, monthlyRev, expenses, allMonthlyRevs, allExp, sett, isSumming)
+        calculateSummary(ym, monthlyRev, expenses, allMonthlyRevs, allExp, sett)
     }.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5000),
@@ -136,14 +135,16 @@ class FinanceViewModel(
         expenses: List<Expense>,
         allMonthlyRevs: List<MonthlyRevenue>,
         allExp: List<Expense>,
-        settings: AppSettings,
-        isSummingWithOtherMonths: Boolean
+        settings: AppSettings
     ): FinanceSummary {
         val salary = monthlyRev.salary
         val extraIncome = monthlyRev.extraIncome
         val totalRevenue = salary + extraIncome
-        val invPercent = settings.investmentPercentage
-        val leisurePercent = settings.leisurePercentage
+
+        // Monthly specific percentage or fallback to default settings:
+        val invPercent = monthlyRev.investmentPercentage ?: settings.investmentPercentage
+        val leisurePercent = monthlyRev.leisurePercentage ?: settings.leisurePercentage
+        val isSummingWithOtherMonths = settings.sumWithOtherMonths
 
         val investmentAllocated = if (totalRevenue > 0) totalRevenue * (invPercent / 100.0) else 0.0
         val leisureLimit = if (totalRevenue > 0) totalRevenue * (leisurePercent / 100.0) else 0.0
@@ -192,8 +193,8 @@ class FinanceViewModel(
             currentMonthStr = currentMonthStr,
             allMonthlyRevs = allMonthlyRevs,
             allExp = allExp,
-            invPercent = invPercent,
-            leisurePercent = leisurePercent
+            defaultInvPercent = settings.investmentPercentage,
+            defaultLeisurePercent = settings.leisurePercentage
         )
 
         val totalAccumulated = previousMonthsBalance + availableMonth
@@ -230,10 +231,10 @@ class FinanceViewModel(
         currentMonthStr: String,
         allMonthlyRevs: List<MonthlyRevenue>,
         allExp: List<Expense>,
-        invPercent: Double,
-        leisurePercent: Double
+        defaultInvPercent: Double,
+        defaultLeisurePercent: Double
     ): Double {
-        val revByMonth = allMonthlyRevs.associate { it.month to it.totalRevenue }
+        val revByMonth = allMonthlyRevs.associateBy { it.month }
         val expByMonth = allExp.groupBy { it.dueDate.take(7) }
         val previousMonthKeys = (revByMonth.keys + expByMonth.keys)
             .filter { it.isNotBlank() && it < currentMonthStr }
@@ -242,8 +243,11 @@ class FinanceViewModel(
 
         var accumulated = 0.0
         for (m in previousMonthKeys) {
-            val rev = revByMonth[m] ?: 0.0
+            val revObj = revByMonth[m]
+            val rev = revObj?.totalRevenue ?: 0.0
             if (rev > 0) {
+                val invPercent = revObj?.investmentPercentage ?: defaultInvPercent
+                val leisurePercent = revObj?.leisurePercentage ?: defaultLeisurePercent
                 val inv = rev * (invPercent / 100.0)
                 val leisureLim = rev * (leisurePercent / 100.0)
                 val generalExp = expByMonth[m]
@@ -276,6 +280,22 @@ class FinanceViewModel(
         val month = _selectedYearMonth.value.toString()
         viewModelScope.launch {
             repository.saveMonthlyRevenue(month, salary, extraIncome)
+        }
+    }
+
+    fun updateMonthlyPercentages(
+        month: String = _selectedYearMonth.value.toString(),
+        invPercent: Double?,
+        leisurePercent: Double?
+    ) {
+        viewModelScope.launch {
+            repository.saveMonthlyPercentages(month, invPercent, leisurePercent)
+        }
+    }
+
+    fun resetMonthlyPercentagesToDefault(month: String = _selectedYearMonth.value.toString()) {
+        viewModelScope.launch {
+            repository.saveMonthlyPercentages(month, null, null)
         }
     }
 
