@@ -189,15 +189,17 @@ class FinanceRepository(
         // 2. Insert standard default categories only if not already present
         val defaultCategoryNames = listOf(
             "Alimentação",
-            "Moradia",
             "Água",
-            "Energia",
-            "Internet",
-            "Transporte",
-            "Saúde",
             "Compras",
+            "Empréstimo",
+            "Energia",
+            "Imposto",
+            "Internet",
             "Lazer",
-            "Outros"
+            "Moradia",
+            "Outros",
+            "Saúde",
+            "Transporte"
         )
         for (catName in defaultCategoryNames) {
             val existing = categoryDao.getCategoryByName(catName)

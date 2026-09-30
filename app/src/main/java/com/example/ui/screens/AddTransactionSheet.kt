@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import android.app.DatePickerDialog
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -52,6 +53,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.Category
+import com.example.ui.theme.LeisurePurple
 import com.example.ui.theme.PaidGreen
 import com.example.ui.theme.PendingYellow
 import com.example.util.CurrencyUtils
@@ -383,10 +385,26 @@ fun AddTransactionSheet(
                 )
                 Spacer(modifier = Modifier.height(6.dp))
 
-                val defaultCategories = listOf("Alimentação", "Moradia", "Transporte", "Lazer", "Saúde", "Outros")
+                val defaultCategories = listOf(
+                    "Alimentação",
+                    "Água",
+                    "Compras",
+                    "Empréstimo",
+                    "Energia",
+                    "Imposto",
+                    "Internet",
+                    "Lazer",
+                    "Moradia",
+                    "Outros",
+                    "Saúde",
+                    "Transporte"
+                )
                 val availableCategories = remember(categories) {
+                    val collator = java.text.Collator.getInstance(java.util.Locale("pt", "BR")).apply {
+                        strength = java.text.Collator.PRIMARY
+                    }
                     val fromDb = categories.map { it.name.trim() }.filter { it.isNotBlank() }
-                    (defaultCategories + fromDb).distinct()
+                    (defaultCategories + fromDb).distinct().sortedWith { a, b -> collator.compare(a, b) }
                 }
 
                 Row(
@@ -396,10 +414,33 @@ fun AddTransactionSheet(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     availableCategories.forEach { cat ->
+                        val isLazer = cat.equals("Lazer", ignoreCase = true)
+                        val isSelected = selectedCategory.equals(cat, ignoreCase = true)
                         FilterChip(
-                            selected = selectedCategory.equals(cat, ignoreCase = true),
+                            selected = isSelected,
                             onClick = { selectedCategory = cat },
-                            label = { Text(cat, fontSize = 12.sp) }
+                            label = {
+                                Text(
+                                    text = cat,
+                                    fontSize = 12.sp,
+                                    fontWeight = if (isLazer) FontWeight.SemiBold else FontWeight.Normal
+                                )
+                            },
+                            colors = if (isLazer) {
+                                FilterChipDefaults.filterChipColors(
+                                    containerColor = LeisurePurple.copy(alpha = 0.08f),
+                                    labelColor = LeisurePurple,
+                                    selectedContainerColor = LeisurePurple.copy(alpha = 0.22f),
+                                    selectedLabelColor = LeisurePurple
+                                )
+                            } else {
+                                FilterChipDefaults.filterChipColors()
+                            },
+                            border = if (isLazer) {
+                                BorderStroke(1.dp, LeisurePurple.copy(alpha = if (isSelected) 0.8f else 0.4f))
+                            } else {
+                                FilterChipDefaults.filterChipBorder(enabled = true, selected = isSelected)
+                            }
                         )
                     }
                 }

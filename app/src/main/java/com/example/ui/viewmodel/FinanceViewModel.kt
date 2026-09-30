@@ -106,7 +106,11 @@ class FinanceViewModel(
 
     val categories: StateFlow<List<Category>> = repository.getCategories()
         .map { list ->
+            val collator = java.text.Collator.getInstance(java.util.Locale("pt", "BR")).apply {
+                strength = java.text.Collator.PRIMARY
+            }
             list.distinctBy { it.name.trim().lowercase() }
+                .sortedWith { a, b -> collator.compare(a.name, b.name) }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 

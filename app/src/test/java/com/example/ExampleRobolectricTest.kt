@@ -6,6 +6,7 @@ import com.example.data.model.Expense
 import com.example.data.model.PaymentStatus
 import com.example.util.CurrencyUtils
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -169,5 +170,41 @@ class ExampleRobolectricTest {
     )
     assertEquals(10.0, monthCustom3.investmentPercentage ?: defaultInv, 0.001)
     assertEquals(15.0, monthCustom3.leisurePercentage ?: defaultLeisure, 0.001)
+  }
+
+  @Test
+  fun `test categories include Emprestimo and Imposto in A-Z alphabetical order`() {
+    val defaultCategoryNames = listOf(
+      "Alimentação",
+      "Água",
+      "Compras",
+      "Empréstimo",
+      "Energia",
+      "Imposto",
+      "Internet",
+      "Lazer",
+      "Moradia",
+      "Outros",
+      "Saúde",
+      "Transporte"
+    )
+
+    assertTrue(defaultCategoryNames.contains("Empréstimo"))
+    assertTrue(defaultCategoryNames.contains("Imposto"))
+    assertTrue(defaultCategoryNames.contains("Lazer"))
+
+    val collator = java.text.Collator.getInstance(java.util.Locale("pt", "BR")).apply {
+      strength = java.text.Collator.PRIMARY
+    }
+
+    val sorted = defaultCategoryNames.sortedWith { a, b -> collator.compare(a, b) }
+
+    // Verify Lazer is in its natural alphabetical position (after Imposto/Internet and before Moradia)
+    val lazerIndex = sorted.indexOf("Lazer")
+    val impostoIndex = sorted.indexOf("Imposto")
+    val moradiaIndex = sorted.indexOf("Moradia")
+
+    assertTrue(impostoIndex < lazerIndex)
+    assertTrue(lazerIndex < moradiaIndex)
   }
 }

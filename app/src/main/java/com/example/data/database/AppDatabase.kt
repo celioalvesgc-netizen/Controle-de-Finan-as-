@@ -123,15 +123,17 @@ abstract class AppDatabase : RoomDatabase() {
                 // Populate default categories without duplicates
                 val defaultCategoryNames = listOf(
                     "Alimentação",
-                    "Moradia",
                     "Água",
-                    "Energia",
-                    "Internet",
-                    "Transporte",
-                    "Saúde",
                     "Compras",
+                    "Empréstimo",
+                    "Energia",
+                    "Imposto",
+                    "Internet",
                     "Lazer",
-                    "Outros"
+                    "Moradia",
+                    "Outros",
+                    "Saúde",
+                    "Transporte"
                 )
 
                 for (catName in defaultCategoryNames) {

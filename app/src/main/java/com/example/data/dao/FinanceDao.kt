@@ -79,7 +79,7 @@ interface ExpenseDao {
 
 @Dao
 interface CategoryDao {
-    @Query("SELECT * FROM categories WHERE id IN (SELECT MIN(id) FROM categories GROUP BY LOWER(TRIM(name))) ORDER BY id ASC")
+    @Query("SELECT * FROM categories WHERE id IN (SELECT MIN(id) FROM categories GROUP BY LOWER(TRIM(name))) ORDER BY name COLLATE NOCASE ASC")
     fun getAllCategories(): Flow<List<Category>>
 
     @Query("SELECT * FROM categories WHERE LOWER(TRIM(name)) = LOWER(TRIM(:name)) LIMIT 1")

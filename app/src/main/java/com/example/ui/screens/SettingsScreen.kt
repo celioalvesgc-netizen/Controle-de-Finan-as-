@@ -721,6 +721,7 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     categories.forEach { cat ->
+                        val isLazer = cat.name.equals("Lazer", ignoreCase = true)
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -732,33 +733,39 @@ fun SettingsScreen(
                                 Box(
                                     modifier = Modifier
                                         .size(26.dp)
-                                        .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
+                                        .background(
+                                            if (isLazer) LeisurePurple.copy(alpha = 0.15f)
+                                            else MaterialTheme.colorScheme.surfaceVariant,
+                                            CircleShape
+                                        ),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Category,
                                         contentDescription = null,
                                         modifier = Modifier.size(14.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        tint = if (isLazer) LeisurePurple else MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Text(
                                     text = cat.name,
                                     style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Medium
+                                    fontWeight = if (isLazer) FontWeight.SemiBold else FontWeight.Medium,
+                                    color = if (isLazer) LeisurePurple else MaterialTheme.colorScheme.onSurface
                                 )
                                 if (!cat.isCustom) {
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Surface(
                                         shape = RoundedCornerShape(4.dp),
-                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                        color = if (isLazer) LeisurePurple.copy(alpha = 0.12f)
+                                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                                     ) {
                                         Text(
                                             text = "Padrão",
                                             fontSize = 9.sp,
                                             modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            color = if (isLazer) LeisurePurple else MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                 }

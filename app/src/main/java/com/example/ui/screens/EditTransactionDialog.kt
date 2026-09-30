@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import android.app.DatePickerDialog
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -24,6 +25,7 @@ import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -46,6 +48,7 @@ import androidx.compose.ui.unit.sp
 import com.example.data.model.Category
 import com.example.data.model.Expense
 import com.example.data.model.Revenue
+import com.example.ui.theme.LeisurePurple
 import com.example.util.CurrencyUtils
 import java.util.Calendar
 import java.util.Locale
@@ -63,10 +66,26 @@ fun EditExpenseDialog(
     var isPaid by remember { mutableStateOf(expense.isPaid) }
     var selectedCategory by remember { mutableStateOf(if (expense.category.isNotBlank()) expense.category else "Outros") }
 
-    val defaultCategories = listOf("Alimentação", "Moradia", "Transporte", "Lazer", "Saúde", "Outros")
+    val defaultCategories = listOf(
+        "Alimentação",
+        "Água",
+        "Compras",
+        "Empréstimo",
+        "Energia",
+        "Imposto",
+        "Internet",
+        "Lazer",
+        "Moradia",
+        "Outros",
+        "Saúde",
+        "Transporte"
+    )
     val availableCategories = remember(categories) {
+        val collator = java.text.Collator.getInstance(java.util.Locale("pt", "BR")).apply {
+            strength = java.text.Collator.PRIMARY
+        }
         val fromDb = categories.map { it.name.trim() }.filter { it.isNotBlank() }
-        (defaultCategories + fromDb).distinct()
+        (defaultCategories + fromDb).distinct().sortedWith { a, b -> collator.compare(a, b) }
     }
 
     val context = LocalContext.current
@@ -180,10 +199,33 @@ fun EditExpenseDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     availableCategories.forEach { cat ->
+                        val isLazer = cat.equals("Lazer", ignoreCase = true)
+                        val isSelected = selectedCategory.equals(cat, ignoreCase = true)
                         FilterChip(
-                            selected = selectedCategory.equals(cat, ignoreCase = true),
+                            selected = isSelected,
                             onClick = { selectedCategory = cat },
-                            label = { Text(cat, fontSize = 12.sp) }
+                            label = {
+                                Text(
+                                    text = cat,
+                                    fontSize = 12.sp,
+                                    fontWeight = if (isLazer) FontWeight.SemiBold else FontWeight.Normal
+                                )
+                            },
+                            colors = if (isLazer) {
+                                FilterChipDefaults.filterChipColors(
+                                    containerColor = LeisurePurple.copy(alpha = 0.08f),
+                                    labelColor = LeisurePurple,
+                                    selectedContainerColor = LeisurePurple.copy(alpha = 0.22f),
+                                    selectedLabelColor = LeisurePurple
+                                )
+                            } else {
+                                FilterChipDefaults.filterChipColors()
+                            },
+                            border = if (isLazer) {
+                                BorderStroke(1.dp, LeisurePurple.copy(alpha = if (isSelected) 0.8f else 0.4f))
+                            } else {
+                                FilterChipDefaults.filterChipBorder(enabled = true, selected = isSelected)
+                            }
                         )
                     }
                 }
