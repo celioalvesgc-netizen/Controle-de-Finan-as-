@@ -61,8 +61,8 @@ fun MonthlyPercentagesSheet(
     selectedYearMonth: YearMonth,
     currentInvestmentPercent: Double,
     currentLeisurePercent: Double,
-    defaultInvestmentPercent: Double,
-    defaultLeisurePercent: Double,
+    defaultInvestmentPercent: Double = 20.0,
+    defaultLeisurePercent: Double = 10.0,
     totalRevenue: Double,
     onSavePercentages: (invPercent: Double, leisurePercent: Double) -> Unit,
     onResetToDefault: () -> Unit,
@@ -320,7 +320,7 @@ fun MonthlyPercentagesSheet(
                 Icon(Icons.Default.RestartAlt, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    "Usar padrão (${defaultInvestmentPercent.roundToInt()}% / ${defaultLeisurePercent.roundToInt()}%)",
+                    "Restaurar padrão (20% / 10%)",
                     fontSize = 13.sp
                 )
             }

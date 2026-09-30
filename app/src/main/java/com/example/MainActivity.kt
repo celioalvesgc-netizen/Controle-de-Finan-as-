@@ -280,9 +280,6 @@ fun MainApp(
                         onSaveMonthPercentages = { month, inv, leisure ->
                             viewModel.updateMonthlyPercentages(month, inv, leisure)
                         },
-                        onSaveDefaultSettings = { inv, leisure ->
-                            viewModel.updateSettings(inv, leisure)
-                        },
                         onAddCategory = { viewModel.addCategory(it) },
                         onDeleteCategory = { viewModel.deleteCategory(it) },
                         onToggleTheme = { viewModel.updateTheme(it) },
@@ -299,8 +296,8 @@ fun MainApp(
             selectedYearMonth = selectedYearMonth,
             currentInvestmentPercent = summary.investmentPercentage,
             currentLeisurePercent = summary.leisurePercentage,
-            defaultInvestmentPercent = settings.investmentPercentage,
-            defaultLeisurePercent = settings.leisurePercentage,
+            defaultInvestmentPercent = 20.0,
+            defaultLeisurePercent = 10.0,
             totalRevenue = summary.totalRevenue,
             onSavePercentages = { inv, leisure ->
                 viewModel.updateMonthlyPercentages(selectedYearMonth.toString(), inv, leisure)

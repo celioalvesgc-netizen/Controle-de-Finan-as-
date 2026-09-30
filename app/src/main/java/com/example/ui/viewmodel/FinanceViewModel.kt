@@ -24,14 +24,17 @@ import java.time.LocalDate
 import java.time.YearMonth
 import kotlin.math.max
 
+const val DEFAULT_SYSTEM_INVESTMENT_PERCENTAGE = 20.0
+const val DEFAULT_SYSTEM_LEISURE_PERCENTAGE = 10.0
+
 data class FinanceSummary(
     val monthYear: YearMonth,
     val salary: Double = 0.0,
     val extraIncome: Double = 0.0,
     val totalRevenue: Double = 0.0,
-    val investmentPercentage: Double = 10.0,
+    val investmentPercentage: Double = DEFAULT_SYSTEM_INVESTMENT_PERCENTAGE,
     val investmentAllocated: Double = 0.0,
-    val leisurePercentage: Double = 10.0,
+    val leisurePercentage: Double = DEFAULT_SYSTEM_LEISURE_PERCENTAGE,
     val leisureLimit: Double = 0.0,
     val leisureSpent: Double = 0.0,
     val leisureAvailable: Double = 0.0,
@@ -141,9 +144,9 @@ class FinanceViewModel(
         val extraIncome = monthlyRev.extraIncome
         val totalRevenue = salary + extraIncome
 
-        // Monthly specific percentage or fallback to default settings:
-        val invPercent = monthlyRev.investmentPercentage ?: settings.investmentPercentage
-        val leisurePercent = monthlyRev.leisurePercentage ?: settings.leisurePercentage
+        // Monthly specific percentage or fallback to system defaults (20% Investimento / 10% Lazer):
+        val invPercent = monthlyRev.investmentPercentage ?: DEFAULT_SYSTEM_INVESTMENT_PERCENTAGE
+        val leisurePercent = monthlyRev.leisurePercentage ?: DEFAULT_SYSTEM_LEISURE_PERCENTAGE
         val isSummingWithOtherMonths = settings.sumWithOtherMonths
 
         val investmentAllocated = if (totalRevenue > 0) totalRevenue * (invPercent / 100.0) else 0.0
@@ -192,9 +195,7 @@ class FinanceViewModel(
         val previousMonthsBalance = calculatePreviousMonthsAvailableBalance(
             currentMonthStr = currentMonthStr,
             allMonthlyRevs = allMonthlyRevs,
-            allExp = allExp,
-            defaultInvPercent = settings.investmentPercentage,
-            defaultLeisurePercent = settings.leisurePercentage
+            allExp = allExp
         )
 
         val totalAccumulated = previousMonthsBalance + availableMonth
@@ -230,9 +231,7 @@ class FinanceViewModel(
     private fun calculatePreviousMonthsAvailableBalance(
         currentMonthStr: String,
         allMonthlyRevs: List<MonthlyRevenue>,
-        allExp: List<Expense>,
-        defaultInvPercent: Double,
-        defaultLeisurePercent: Double
+        allExp: List<Expense>
     ): Double {
         val revByMonth = allMonthlyRevs.associateBy { it.month }
         val expByMonth = allExp.groupBy { it.dueDate.take(7) }
@@ -246,8 +245,8 @@ class FinanceViewModel(
             val revObj = revByMonth[m]
             val rev = revObj?.totalRevenue ?: 0.0
             if (rev > 0) {
-                val invPercent = revObj?.investmentPercentage ?: defaultInvPercent
-                val leisurePercent = revObj?.leisurePercentage ?: defaultLeisurePercent
+                val invPercent = revObj?.investmentPercentage ?: DEFAULT_SYSTEM_INVESTMENT_PERCENTAGE
+                val leisurePercent = revObj?.leisurePercentage ?: DEFAULT_SYSTEM_LEISURE_PERCENTAGE
                 val inv = rev * (invPercent / 100.0)
                 val leisureLim = rev * (leisurePercent / 100.0)
                 val generalExp = expByMonth[m]

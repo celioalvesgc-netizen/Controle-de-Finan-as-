@@ -126,28 +126,48 @@ class ExampleRobolectricTest {
 
   @Test
   fun `test monthly specific percentages vs default fallback`() {
-    val defaultSettings = com.example.data.model.AppSettings(
-      investmentPercentage = 10.0,
-      leisurePercentage = 10.0
-    )
+    val defaultInv = com.example.ui.viewmodel.DEFAULT_SYSTEM_INVESTMENT_PERCENTAGE
+    val defaultLeisure = com.example.ui.viewmodel.DEFAULT_SYSTEM_LEISURE_PERCENTAGE
+    assertEquals(20.0, defaultInv, 0.001)
+    assertEquals(10.0, defaultLeisure, 0.001)
 
-    // Month without custom percentages -> falls back to defaults
+    // Month without custom percentages -> falls back to system defaults (20% / 10%)
     val monthDefault = com.example.data.model.MonthlyRevenue(month = "2026-09", salary = 5000.0)
-    val effectiveInv1 = monthDefault.investmentPercentage ?: defaultSettings.investmentPercentage
-    val effectiveLeisure1 = monthDefault.leisurePercentage ?: defaultSettings.leisurePercentage
-    assertEquals(10.0, effectiveInv1, 0.001)
+    val effectiveInv1 = monthDefault.investmentPercentage ?: defaultInv
+    val effectiveLeisure1 = monthDefault.leisurePercentage ?: defaultLeisure
+    assertEquals(20.0, effectiveInv1, 0.001)
     assertEquals(10.0, effectiveLeisure1, 0.001)
 
+    // Month with custom percentages (e.g. Setembro: Investimento 15% | Lazer 5%)
+    val monthCustom1 = com.example.data.model.MonthlyRevenue(
+      month = "2026-09",
+      salary = 5000.0,
+      investmentPercentage = 15.0,
+      leisurePercentage = 5.0
+    )
+    val effectiveInv2 = monthCustom1.investmentPercentage ?: defaultInv
+    val effectiveLeisure2 = monthCustom1.leisurePercentage ?: defaultLeisure
+    assertEquals(15.0, effectiveInv2, 0.001)
+    assertEquals(5.0, effectiveLeisure2, 0.001)
+
     // Month with custom percentages (e.g. Outubro: Investimento 20% | Lazer 10%)
-    val monthCustom = com.example.data.model.MonthlyRevenue(
+    val monthCustom2 = com.example.data.model.MonthlyRevenue(
       month = "2026-10",
       salary = 5000.0,
       investmentPercentage = 20.0,
-      leisurePercentage = 5.0
+      leisurePercentage = 10.0
     )
-    val effectiveInv2 = monthCustom.investmentPercentage ?: defaultSettings.investmentPercentage
-    val effectiveLeisure2 = monthCustom.leisurePercentage ?: defaultSettings.leisurePercentage
-    assertEquals(20.0, effectiveInv2, 0.001)
-    assertEquals(5.0, effectiveLeisure2, 0.001)
+    assertEquals(20.0, monthCustom2.investmentPercentage ?: defaultInv, 0.001)
+    assertEquals(10.0, monthCustom2.leisurePercentage ?: defaultLeisure, 0.001)
+
+    // Month with custom percentages (e.g. Novembro: Investimento 10% | Lazer 15%)
+    val monthCustom3 = com.example.data.model.MonthlyRevenue(
+      month = "2026-11",
+      salary = 5000.0,
+      investmentPercentage = 10.0,
+      leisurePercentage = 15.0
+    )
+    assertEquals(10.0, monthCustom3.investmentPercentage ?: defaultInv, 0.001)
+    assertEquals(15.0, monthCustom3.leisurePercentage ?: defaultLeisure, 0.001)
   }
 }
