@@ -244,7 +244,7 @@ fun MonthlyPercentagesSheet(
                             }
                             Spacer(modifier = Modifier.width(10.dp))
                             Text(
-                                text = "Limite de Lazer",
+                                text = "Limite Recomendado de Lazer",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
@@ -281,6 +281,22 @@ fun MonthlyPercentagesSheet(
                         ),
                         modifier = Modifier.testTag("slider_lazer_sheet")
                     )
+
+                    if (totalRevenue > 0) {
+                        val valor = totalRevenue * (leisureSlider / 100.0)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Limite recomendado para lazer neste mês: ${CurrencyUtils.formatCurrency(valor)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            color = LeisurePurple
+                        )
+                        Text(
+                            text = "Serve apenas como referência de gastos; não reduz o saldo disponível antecipadamente.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
 

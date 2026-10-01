@@ -330,6 +330,8 @@ fun MainApp(
             selectedYearMonth = selectedYearMonth,
             currentSalary = summary.salary,
             currentExtraIncome = summary.extraIncome,
+            leisureLimit = summary.leisureLimit,
+            leisureSpent = summary.leisureSpent,
             initialType = addTransactionInitialType,
             onDismiss = { isAddSheetVisible = false },
             onSaveMonthlyRevenue = { sal, extra ->
@@ -356,6 +358,8 @@ fun MainApp(
         EditExpenseDialog(
             expense = exp,
             categories = categories,
+            leisureLimit = summary.leisureLimit,
+            leisureSpent = summary.leisureSpent,
             onDismiss = { expenseToEdit = null },
             onConfirm = { updated ->
                 viewModel.updateExpense(updated)

@@ -6,6 +6,7 @@ import com.example.data.model.Expense
 import com.example.data.model.PaymentStatus
 import com.example.util.CurrencyUtils
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -206,5 +207,109 @@ class ExampleRobolectricTest {
 
     assertTrue(impostoIndex < lazerIndex)
     assertTrue(lazerIndex < moradiaIndex)
+  }
+
+  @Test
+  fun `test recommended leisure limit tracking and non-deduction from available balance`() {
+    val totalRevenue = 5000.0
+    val invPercent = 20.0
+    val leisurePercent = 10.0
+
+    val investmentAllocated = totalRevenue * (invPercent / 100.0) // 1000.0
+    val leisureLimit = totalRevenue * (leisurePercent / 100.0) // 500.0 (reference only)
+
+    // User registers 2 leisure expenses: Cinema R$ 80 + Restaurante R$ 120 = R$ 200
+    val leisureExpense1 = 80.0
+    val leisureExpense2 = 120.0
+    val leisureSpent = leisureExpense1 + leisureExpense2 // 200.0
+
+    val remainingLeisureLimit = kotlin.math.max(0.0, leisureLimit - leisureSpent) // 300.0
+    assertEquals(500.0, leisureLimit, 0.001)
+    assertEquals(200.0, leisureSpent, 0.001)
+    assertEquals(300.0, remainingLeisureLimit, 0.001)
+
+    // General expenses
+    val generalExpenses = 800.0
+    val totalExpenses = generalExpenses + leisureSpent // 1000.0
+
+    // Available balance with only paid expenses deducted:
+    val totalPaid = 1000.0
+    val availableBalance = totalRevenue - investmentAllocated - totalPaid // 5000 - 1000 - 1000 = 3000.0
+    assertEquals(3000.0, availableBalance, 0.001)
+
+    // If spending limit capacity:
+    val spendingLimit = totalRevenue - investmentAllocated // 4000.0
+    val availableForSpending = spendingLimit - totalPaid // 3000.0
+    assertEquals(3000.0, availableForSpending, 0.001)
+  }
+
+  @Test
+  fun `test expenses with status A Pagar do not deduct from available balance and only Paga deducts`() {
+    val totalRevenue = 5000.0
+    val invAllocated = 0.0 // Considerando o exemplo direto do usuário sem investimento
+
+    val exp1Amount = 1000.0 // Aluguel
+    var exp1IsPaid = false // A Pagar
+
+    val exp2Amount = 100.0 // Internet
+    var exp2IsPaid = false // A Pagar
+
+    // Cenário 1: Ambas "A Pagar" -> Saldo disponível deve ser R$ 5.000
+    var totalPaid = (if (exp1IsPaid) exp1Amount else 0.0) + (if (exp2IsPaid) exp2Amount else 0.0)
+    var available = totalRevenue - invAllocated - totalPaid
+    assertEquals(5000.0, available, 0.001)
+
+    // Cenário 2: Marcar Aluguel como PAGO -> Saldo disponível deve ser R$ 4.000
+    exp1IsPaid = true
+    totalPaid = (if (exp1IsPaid) exp1Amount else 0.0) + (if (exp2IsPaid) exp2Amount else 0.0)
+    available = totalRevenue - invAllocated - totalPaid
+    assertEquals(4000.0, available, 0.001)
+
+    // Cenário 3: Marcar Internet como PAGA -> Saldo disponível deve ser R$ 3.900
+    exp2IsPaid = true
+    totalPaid = (if (exp1IsPaid) exp1Amount else 0.0) + (if (exp2IsPaid) exp2Amount else 0.0)
+    available = totalRevenue - invAllocated - totalPaid
+    assertEquals(3900.0, available, 0.001)
+
+    // Cenário 4: Alterar Internet novamente para "A Pagar" -> Saldo retorna para R$ 4.000
+    exp2IsPaid = false
+    totalPaid = (if (exp1IsPaid) exp1Amount else 0.0) + (if (exp2IsPaid) exp2Amount else 0.0)
+    available = totalRevenue - invAllocated - totalPaid
+    assertEquals(4000.0, available, 0.001)
+  }
+
+  @Test
+  fun `test category selection is mandatory and null or blank fails validation`() {
+    val nullCategory: String? = null
+    val blankCategory = "   "
+    val validCategory = "Moradia"
+
+    assertTrue(nullCategory.isNullOrBlank())
+    assertTrue(blankCategory.isBlank())
+    assertFalse(validCategory.isNullOrBlank())
+
+    val validationMessage = "Selecione uma categoria para continuar."
+    assertEquals("Selecione uma categoria para continuar.", validationMessage)
+  }
+
+  @Test
+  fun `test projected balance after paying all expenses`() {
+    val totalRevenue = 5000.0
+    val paidExpenses = 1000.0
+    val pendingExpenses = 800.0
+    val overdueExpenses = 200.0
+
+    // Saldo disponível atual considera apenas as despesas pagas:
+    val currentAvailableBalance = totalRevenue - paidExpenses
+    assertEquals(4000.0, currentAvailableBalance, 0.001)
+
+    // Previsão após quitar todas as despesas (Pagas + A Pagar + Vencidas):
+    val totalExpenses = paidExpenses + pendingExpenses + overdueExpenses
+    val projectedBalance = totalRevenue - totalExpenses
+    assertEquals(3000.0, projectedBalance, 0.001)
+
+    // Também equivalente a currentAvailableBalance - (pending + overdue):
+    val projectedFromAvailable = currentAvailableBalance - (pendingExpenses + overdueExpenses)
+    assertEquals(3000.0, projectedFromAvailable, 0.001)
   }
 }

@@ -25,12 +25,14 @@ import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -54,6 +56,7 @@ import com.example.ui.theme.PendingYellow
 import com.example.ui.viewmodel.FinanceSummary
 import com.example.util.CurrencyUtils
 import java.time.YearMonth
+import kotlin.math.roundToInt
 
 @Composable
 fun HomeScreen(
@@ -270,8 +273,17 @@ fun HomeScreen(
             )
         }
 
-        // 4. LAZER (Limite, Utilizado e Disponível)
+        // 4. LAZER (Limite Recomendado, Utilizado, Restante e Percentual Consumido)
         item {
+            val isOverLimit = summary.leisureLimit > 0 && summary.leisureSpent > summary.leisureLimit
+            val overAmount = if (isOverLimit) summary.leisureSpent - summary.leisureLimit else 0.0
+            val percentConsumed = if (summary.leisureLimit > 0) {
+                ((summary.leisureSpent / summary.leisureLimit) * 100).roundToInt()
+            } else 0
+            val leisureRatio = if (summary.leisureLimit > 0) {
+                (summary.leisureSpent / summary.leisureLimit).toFloat().coerceIn(0f, 1f)
+            } else 0f
+
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -280,7 +292,7 @@ fun HomeScreen(
                     .testTag("card_lazer_resumo"),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
+                border = BorderStroke(1.dp, if (isOverLimit) OverdueRed.copy(alpha = 0.5f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -291,14 +303,14 @@ fun HomeScreen(
                     ) {
                         Column {
                             Text(
-                                text = "LAZER",
+                                text = "LIMITE RECOMENDADO PARA LAZER",
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = if (isOverLimit) OverdueRed else LeisurePurple,
                                 letterSpacing = 0.5.sp
                             )
                             Text(
-                                text = "${String.format("%.0f", summary.leisurePercentage)}% da receita • Toque para ajustar",
+                                text = "${String.format("%.0f", summary.leisurePercentage)}% da receita (${CurrencyUtils.formatCurrency(summary.leisureLimit)}) • Toque para ajustar",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                             )
@@ -306,32 +318,50 @@ fun HomeScreen(
                         Box(
                             modifier = Modifier
                                 .size(32.dp)
-                                .background(LeisurePurple.copy(alpha = 0.12f), CircleShape),
+                                .background(
+                                    if (isOverLimit) OverdueRed.copy(alpha = 0.12f)
+                                    else LeisurePurple.copy(alpha = 0.12f),
+                                    CircleShape
+                                ),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.SportsEsports,
                                 contentDescription = null,
-                                tint = LeisurePurple,
+                                tint = if (isOverLimit) OverdueRed else LeisurePurple,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Text(
-                        text = "Disponível: ${CurrencyUtils.formatCurrency(summary.leisureAvailable)}",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    val leisureRatio = if (summary.leisureLimit > 0) {
-                        (summary.leisureSpent / summary.leisureLimit).toFloat().coerceIn(0f, 1f)
-                    } else 0f
+                    // Linha com Percentual Consumido em destaque
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (isOverLimit) "Acima do limite recomendado" else "Consumo do limite recomendado",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = if (isOverLimit) OverdueRed.copy(alpha = 0.12f) else LeisurePurple.copy(alpha = 0.12f)
+                        ) {
+                            Text(
+                                text = "$percentConsumed% consumido",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isOverLimit) OverdueRed else LeisurePurple,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(6.dp))
 
                     LinearProgressIndicator(
                         progress = { leisureRatio },
@@ -339,27 +369,94 @@ fun HomeScreen(
                             .fillMaxWidth()
                             .height(8.dp)
                             .clip(RoundedCornerShape(4.dp)),
-                        color = if (summary.leisureSpent > summary.leisureLimit) OverdueRed else LeisurePurple,
+                        color = if (isOverLimit) OverdueRed else LeisurePurple,
                         trackColor = MaterialTheme.colorScheme.surfaceVariant,
                     )
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
+                    // 3 Métricas: Limite | Utilizado | Restante
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(
-                            text = "Limite: ${CurrencyUtils.formatCurrency(summary.leisureLimit)}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = "Utilizado: ${CurrencyUtils.formatCurrency(summary.leisureSpent)}",
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Limite",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = CurrencyUtils.formatCurrency(summary.leisureLimit),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Utilizado",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = CurrencyUtils.formatCurrency(summary.leisureSpent),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isOverLimit) OverdueRed else LeisurePurple
+                            )
+                        }
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Restante",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = CurrencyUtils.formatCurrency(summary.leisureAvailable),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = if (summary.leisureAvailable > 0) PaidGreen else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    // Aviso quando ultrapassar o limite recomendado
+                    if (isOverLimit) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = OverdueRed.copy(alpha = 0.1f),
+                            border = BorderStroke(1.dp, OverdueRed.copy(alpha = 0.35f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Warning,
+                                    contentDescription = null,
+                                    tint = OverdueRed,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Você ultrapassou o limite recomendado para lazer deste mês em ${CurrencyUtils.formatCurrency(overAmount)}.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = OverdueRed
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -414,6 +511,15 @@ fun HomeScreen(
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.ExtraBold,
                         color = MaterialTheme.colorScheme.onSurface
+                    )
+
+                    val projectedAmount = if (isSumming) summary.projectedBalanceTotal else summary.projectedBalanceMonth
+                    Spacer(modifier = Modifier.height(3.dp))
+                    Text(
+                        text = "Após quitar tudo: ${CurrencyUtils.formatCurrency(projectedAmount)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
                     Spacer(modifier = Modifier.height(10.dp))

@@ -38,6 +38,7 @@ data class FinanceSummary(
     val leisureLimit: Double = 0.0,
     val leisureSpent: Double = 0.0,
     val leisureAvailable: Double = 0.0,
+    val leisureOverBudget: Double = 0.0,
     val totalExpenses: Double = 0.0,
     val generalExpenses: Double = 0.0,
     val spendingLimit: Double = 0.0,
@@ -50,7 +51,9 @@ data class FinanceSummary(
     val availableBalanceMonth: Double = 0.0,
     val availableBalancePreviousMonths: Double = 0.0,
     val availableBalanceTotal: Double = 0.0,
-    val isAccumulatingWithOtherMonths: Boolean = true
+    val isAccumulatingWithOtherMonths: Boolean = true,
+    val projectedBalanceMonth: Double = 0.0,
+    val projectedBalanceTotal: Double = 0.0
 )
 
 class FinanceViewModel(
@@ -154,20 +157,24 @@ class FinanceViewModel(
         val isSummingWithOtherMonths = settings.sumWithOtherMonths
 
         val investmentAllocated = if (totalRevenue > 0) totalRevenue * (invPercent / 100.0) else 0.0
+        // Limite recomendado de referência para gastos com lazer (NÃO deduzido antecipadamente do saldo):
         val leisureLimit = if (totalRevenue > 0) totalRevenue * (leisurePercent / 100.0) else 0.0
 
         val leisureSpent = expenses
             .filter { it.category.equals("Lazer", ignoreCase = true) }
             .sumOf { it.amount }
         val leisureAvailable = max(0.0, leisureLimit - leisureSpent)
+        val leisureOverBudget = max(0.0, leisureSpent - leisureLimit)
 
         val totalExpenses = expenses.sumOf { it.amount }
         val generalExpenses = expenses
             .filter { !it.category.equals("Lazer", ignoreCase = true) }
             .sumOf { it.amount }
 
-        val spendingLimit = max(0.0, totalRevenue - investmentAllocated - leisureLimit)
-        val availableForSpending = max(0.0, spendingLimit - generalExpenses)
+        // O percentual de lazer NÃO é descontado antecipadamente do saldo disponível.
+        // O saldo disponível desconta apenas o Investimento antecipadamente e despesas efetivamente PAGAS.
+        // Despesas com status "A Pagar" não devem ser descontadas do saldo disponível.
+        val spendingLimit = max(0.0, totalRevenue - investmentAllocated)
 
         val today = LocalDate.now()
         var totalPaid = 0.0
@@ -187,9 +194,12 @@ class FinanceViewModel(
             }
         }
 
+        val availableForSpending = max(0.0, spendingLimit - totalPaid)
+
         // Saldo disponível calculado para o mês selecionado (mês a mês):
+        // Receita total - Investimento alocado - Total de despesas PAGAS do mês
         val availableMonth = if (totalRevenue > 0) {
-            max(0.0, totalRevenue - investmentAllocated - leisureLimit - generalExpenses)
+            max(0.0, totalRevenue - investmentAllocated - totalPaid)
         } else {
             0.0
         }
@@ -205,6 +215,15 @@ class FinanceViewModel(
         val totalAccumulated = previousMonthsBalance + availableMonth
         val effectiveAccumulated = if (isSummingWithOtherMonths) totalAccumulated else availableMonth
 
+        // Previsão de saldo após quitar todas as despesas (Pagas + A Pagar + Vencidas = totalExpenses):
+        val projectedBalanceMonth = if (totalRevenue > 0) {
+            max(0.0, totalRevenue - investmentAllocated - totalExpenses)
+        } else {
+            0.0
+        }
+        val remainingToPay = totalPending + totalOverdue
+        val projectedBalanceTotal = max(0.0, totalAccumulated - remainingToPay)
+
         return FinanceSummary(
             monthYear = yearMonth,
             salary = salary,
@@ -216,6 +235,7 @@ class FinanceViewModel(
             leisureLimit = leisureLimit,
             leisureSpent = leisureSpent,
             leisureAvailable = leisureAvailable,
+            leisureOverBudget = leisureOverBudget,
             totalExpenses = totalExpenses,
             generalExpenses = generalExpenses,
             spendingLimit = spendingLimit,
@@ -228,7 +248,9 @@ class FinanceViewModel(
             availableBalanceMonth = availableMonth,
             availableBalancePreviousMonths = previousMonthsBalance,
             availableBalanceTotal = totalAccumulated,
-            isAccumulatingWithOtherMonths = isSummingWithOtherMonths
+            isAccumulatingWithOtherMonths = isSummingWithOtherMonths,
+            projectedBalanceMonth = projectedBalanceMonth,
+            projectedBalanceTotal = projectedBalanceTotal
         )
     }
 
@@ -250,13 +272,9 @@ class FinanceViewModel(
             val rev = revObj?.totalRevenue ?: 0.0
             if (rev > 0) {
                 val invPercent = revObj?.investmentPercentage ?: DEFAULT_SYSTEM_INVESTMENT_PERCENTAGE
-                val leisurePercent = revObj?.leisurePercentage ?: DEFAULT_SYSTEM_LEISURE_PERCENTAGE
                 val inv = rev * (invPercent / 100.0)
-                val leisureLim = rev * (leisurePercent / 100.0)
-                val generalExp = expByMonth[m]
-                    ?.filter { !it.category.equals("Lazer", ignoreCase = true) }
-                    ?.sumOf { it.amount } ?: 0.0
-                val sobra = max(0.0, rev - inv - leisureLim - generalExp)
+                val totalPaidExp = expByMonth[m]?.filter { it.isPaid }?.sumOf { it.amount } ?: 0.0
+                val sobra = max(0.0, rev - inv - totalPaidExp)
                 accumulated += sobra
             }
         }

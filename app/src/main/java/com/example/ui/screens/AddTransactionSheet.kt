@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import android.app.DatePickerDialog
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -13,6 +14,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -22,8 +25,10 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -37,6 +42,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SheetState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -44,6 +50,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
@@ -54,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.Category
 import com.example.ui.theme.LeisurePurple
+import com.example.ui.theme.OverdueRed
 import com.example.ui.theme.PaidGreen
 import com.example.ui.theme.PendingYellow
 import com.example.util.CurrencyUtils
@@ -61,6 +69,7 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.util.Calendar
 import java.util.Locale
+import kotlin.math.max
 
 enum class TransactionType {
     RECEITA,
@@ -75,6 +84,8 @@ fun AddTransactionSheet(
     selectedYearMonth: YearMonth,
     currentSalary: Double = 0.0,
     currentExtraIncome: Double = 0.0,
+    leisureLimit: Double = 0.0,
+    leisureSpent: Double = 0.0,
     initialType: TransactionType = TransactionType.DESPESA,
     onDismiss: () -> Unit,
     onSaveMonthlyRevenue: (salary: Double, extraIncome: Double) -> Unit = { _, _ -> },
@@ -94,7 +105,8 @@ fun AddTransactionSheet(
     // Expense state
     var description by remember { mutableStateOf("") }
     var amountText by remember { mutableStateOf("") }
-    var selectedCategory by remember { mutableStateOf("Alimentação") }
+    var selectedCategory by remember { mutableStateOf<String?>(null) }
+    var categoryError by remember { mutableStateOf(false) }
 
     val initialDate = remember(selectedYearMonth) {
         val now = LocalDate.now()
@@ -377,12 +389,33 @@ fun AddTransactionSheet(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // 4. Categoria
-                Text(
-                    text = "Categoria",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Categoria *",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = if (categoryError && selectedCategory.isNullOrBlank()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (selectedCategory.isNullOrBlank()) {
+                        Text(
+                            text = "Obrigatório",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (categoryError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                    } else {
+                        Text(
+                            text = selectedCategory ?: "",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.height(6.dp))
 
                 val defaultCategories = listOf(
@@ -415,10 +448,13 @@ fun AddTransactionSheet(
                 ) {
                     availableCategories.forEach { cat ->
                         val isLazer = cat.equals("Lazer", ignoreCase = true)
-                        val isSelected = selectedCategory.equals(cat, ignoreCase = true)
+                        val isSelected = selectedCategory != null && selectedCategory.equals(cat, ignoreCase = true)
                         FilterChip(
                             selected = isSelected,
-                            onClick = { selectedCategory = cat },
+                            onClick = {
+                                selectedCategory = cat
+                                categoryError = false
+                            },
                             label = {
                                 Text(
                                     text = cat,
@@ -442,6 +478,65 @@ fun AddTransactionSheet(
                                 FilterChipDefaults.filterChipBorder(enabled = true, selected = isSelected)
                             }
                         )
+                    }
+                }
+
+                if (categoryError && selectedCategory.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Selecione uma categoria para continuar.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.testTag("error_category_required")
+                    )
+                }
+
+                if (selectedCategory?.equals("Lazer", ignoreCase = true) == true && leisureLimit > 0) {
+                    val currentTypedAmount = CurrencyUtils.parseAmount(amountText)
+                    val projectedSpent = leisureSpent + currentTypedAmount
+                    val isExceeding = projectedSpent > leisureLimit
+                    val diff = if (isExceeding) projectedSpent - leisureLimit else 0.0
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = if (isExceeding) OverdueRed.copy(alpha = 0.1f) else LeisurePurple.copy(alpha = 0.08f),
+                        border = BorderStroke(1.dp, if (isExceeding) OverdueRed.copy(alpha = 0.4f) else LeisurePurple.copy(alpha = 0.25f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = if (isExceeding) Icons.Default.Warning else Icons.Default.Info,
+                                    contentDescription = null,
+                                    tint = if (isExceeding) OverdueRed else LeisurePurple,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = if (isExceeding) "Aviso: Limite de Lazer" else "Acompanhamento de Lazer",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isExceeding) OverdueRed else LeisurePurple
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(3.dp))
+                            if (isExceeding) {
+                                Text(
+                                    text = "Você ultrapassou o limite recomendado para lazer deste mês em ${CurrencyUtils.formatCurrency(diff)}.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = OverdueRed
+                                )
+                            } else {
+                                Text(
+                                    text = "Limite recomendado: ${CurrencyUtils.formatCurrency(leisureLimit)} • Já gasto: ${CurrencyUtils.formatCurrency(leisureSpent)} • Restante: ${CurrencyUtils.formatCurrency(max(0.0, leisureLimit - leisureSpent))}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -541,19 +636,40 @@ fun AddTransactionSheet(
                 Button(
                     onClick = {
                         val amount = CurrencyUtils.parseAmount(amountText)
-                        if (description.isBlank() || amount <= 0.0) {
+                        val isDescBlank = description.isBlank()
+                        val isAmountInvalid = amount <= 0.0
+                        val isCategoryMissing = selectedCategory.isNullOrBlank()
+
+                        if (isDescBlank || isAmountInvalid) {
                             hasError = true
+                        }
+                        if (isCategoryMissing) {
+                            categoryError = true
+                            Toast.makeText(context, "Selecione uma categoria para continuar.", Toast.LENGTH_SHORT).show()
+                        }
+                        if (isDescBlank || isAmountInvalid || isCategoryMissing) {
                             return@Button
                         }
 
+                        val categoryChosen = selectedCategory!!
                         onAddExpense(
                             description,
                             amount,
                             dateIso,
                             isExpensePaid,
                             recurrenceOption,
-                            selectedCategory
+                            categoryChosen
                         )
+
+                        if (categoryChosen.equals("Lazer", ignoreCase = true) && leisureLimit > 0 && (leisureSpent + amount) > leisureLimit) {
+                            val overAmount = (leisureSpent + amount) - leisureLimit
+                            Toast.makeText(
+                                context,
+                                "Você ultrapassou o limite recomendado para lazer deste mês em ${CurrencyUtils.formatCurrency(overAmount)}.",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+
                         onDismiss()
                     },
                     modifier = Modifier

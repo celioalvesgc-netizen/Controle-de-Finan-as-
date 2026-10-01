@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import android.app.DatePickerDialog
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -12,6 +13,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -21,7 +24,9 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
@@ -30,6 +35,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -37,6 +43,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
@@ -49,14 +56,18 @@ import com.example.data.model.Category
 import com.example.data.model.Expense
 import com.example.data.model.Revenue
 import com.example.ui.theme.LeisurePurple
+import com.example.ui.theme.OverdueRed
 import com.example.util.CurrencyUtils
 import java.util.Calendar
 import java.util.Locale
+import kotlin.math.max
 
 @Composable
 fun EditExpenseDialog(
     expense: Expense,
     categories: List<Category> = emptyList(),
+    leisureLimit: Double = 0.0,
+    leisureSpent: Double = 0.0,
     onDismiss: () -> Unit,
     onConfirm: (Expense) -> Unit
 ) {
@@ -230,6 +241,55 @@ fun EditExpenseDialog(
                     }
                 }
 
+                if (selectedCategory.equals("Lazer", ignoreCase = true) && leisureLimit > 0) {
+                    val currentTypedAmount = CurrencyUtils.parseAmount(amountText)
+                    val oldAmount = if (expense.category.equals("Lazer", ignoreCase = true)) expense.amount else 0.0
+                    val projectedSpent = leisureSpent - oldAmount + currentTypedAmount
+                    val isExceeding = projectedSpent > leisureLimit
+                    val diff = if (isExceeding) projectedSpent - leisureLimit else 0.0
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = if (isExceeding) OverdueRed.copy(alpha = 0.1f) else LeisurePurple.copy(alpha = 0.08f),
+                        border = BorderStroke(1.dp, if (isExceeding) OverdueRed.copy(alpha = 0.4f) else LeisurePurple.copy(alpha = 0.25f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = if (isExceeding) Icons.Default.Warning else Icons.Default.Info,
+                                    contentDescription = null,
+                                    tint = if (isExceeding) OverdueRed else LeisurePurple,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = if (isExceeding) "Aviso: Limite de Lazer" else "Acompanhamento de Lazer",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isExceeding) OverdueRed else LeisurePurple
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(3.dp))
+                            if (isExceeding) {
+                                Text(
+                                    text = "Você ultrapassou o limite recomendado para lazer deste mês em ${CurrencyUtils.formatCurrency(diff)}.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = OverdueRed
+                                )
+                            } else {
+                                Text(
+                                    text = "Limite recomendado: ${CurrencyUtils.formatCurrency(leisureLimit)} • Já gasto: ${CurrencyUtils.formatCurrency(leisureSpent)} • Restante: ${CurrencyUtils.formatCurrency(max(0.0, leisureLimit - projectedSpent))}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+
                 Text(
                     text = "Status",
                     style = MaterialTheme.typography.labelMedium,
@@ -260,19 +320,39 @@ fun EditExpenseDialog(
             Button(
                 onClick = {
                     val amount = CurrencyUtils.parseAmount(amountText)
-                    if (description.isNotBlank() && amount > 0.0) {
-                        onConfirm(
-                            expense.copy(
-                                description = description.trim(),
-                                amount = amount,
-                                dueDate = dueDate.trim(),
-                                isPaid = isPaid,
-                                category = selectedCategory,
-                                paidDate = if (isPaid) (expense.paidDate ?: CurrencyUtils.todayIso()) else null
-                            )
-                        )
-                        onDismiss()
+                    if (description.isBlank() || amount <= 0.0) {
+                        return@Button
                     }
+                    if (selectedCategory.isBlank()) {
+                        Toast.makeText(context, "Selecione uma categoria para continuar.", Toast.LENGTH_SHORT).show()
+                        return@Button
+                    }
+
+                    onConfirm(
+                        expense.copy(
+                            description = description.trim(),
+                            amount = amount,
+                            dueDate = dueDate.trim(),
+                            isPaid = isPaid,
+                            category = selectedCategory.trim(),
+                            paidDate = if (isPaid) (expense.paidDate ?: CurrencyUtils.todayIso()) else null
+                        )
+                    )
+
+                        if (selectedCategory.equals("Lazer", ignoreCase = true) && leisureLimit > 0) {
+                            val oldAmount = if (expense.category.equals("Lazer", ignoreCase = true)) expense.amount else 0.0
+                            val projectedSpent = leisureSpent - oldAmount + amount
+                            if (projectedSpent > leisureLimit) {
+                                val overAmount = projectedSpent - leisureLimit
+                                Toast.makeText(
+                                    context,
+                                    "Você ultrapassou o limite recomendado para lazer deste mês em ${CurrencyUtils.formatCurrency(overAmount)}.",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        }
+
+                        onDismiss()
                 },
                 shape = RoundedCornerShape(10.dp)
             ) {

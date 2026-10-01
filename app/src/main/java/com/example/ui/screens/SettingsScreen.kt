@@ -659,6 +659,12 @@ fun SettingsScreen(
                         modifier = Modifier.testTag("slider_lazer_mes")
                     )
 
+                    Text(
+                        text = "Valor de referência recomendado para lazer. Não desconta antecipadamente do saldo disponível.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
                     if (isCustomForMonth) {
                         Spacer(modifier = Modifier.height(8.dp))
                         OutlinedButton(
