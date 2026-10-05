@@ -226,8 +226,8 @@ fun FinancialMetricCard(
             .testTag("metric_card_${title.lowercase().replace(" ", "_")}"),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = containerColor),
-        border = border,
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        border = border ?: BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
         Column(
             modifier = Modifier.padding(18.dp)
