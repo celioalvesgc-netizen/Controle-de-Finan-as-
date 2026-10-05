@@ -44,7 +44,13 @@ class FinanceRepository(
         )
     }
 
-    suspend fun saveMonthlyPercentages(month: String, investmentPercentage: Double?, leisurePercentage: Double?) {
+    suspend fun saveMonthlyPercentages(
+        month: String,
+        investmentPercentage: Double?,
+        leisurePercentage: Double?,
+        categoryLimitName: String? = null,
+        categoryLimitPercentage: Double? = null
+    ) {
         val existing = monthlyRevenueDao.getRevenueForMonthDirect(month)
         monthlyRevenueDao.saveMonthlyRevenue(
             MonthlyRevenue(
@@ -52,7 +58,9 @@ class FinanceRepository(
                 salary = existing?.salary ?: 0.0,
                 extraIncome = existing?.extraIncome ?: 0.0,
                 investmentPercentage = investmentPercentage,
-                leisurePercentage = leisurePercentage
+                leisurePercentage = leisurePercentage,
+                categoryLimitName = categoryLimitName ?: existing?.categoryLimitName,
+                categoryLimitPercentage = categoryLimitPercentage ?: existing?.categoryLimitPercentage
             )
         )
     }
@@ -105,10 +113,11 @@ class FinanceRepository(
         dueDate: String,
         isPaid: Boolean = false,
         recurrenceMonths: Int = 1,
-        category: String = "Geral"
+        category: String = "Geral",
+        isMonthlyRecurring: Boolean = false
     ) {
         val paidDate = if (isPaid) CurrencyUtils.todayIso() else null
-        if (recurrenceMonths <= 1) {
+        if (!isMonthlyRecurring && recurrenceMonths <= 1) {
             val single = Expense(
                 description = description,
                 amount = amount,
@@ -121,11 +130,32 @@ class FinanceRepository(
                 recurringTotal = 1
             )
             expenseDao.insertExpense(single)
-        } else {
+        } else if (isMonthlyRecurring) {
+            // Mensal: despesa recorrente sem prazo definido
             val groupId = UUID.randomUUID().toString()
-            val total = if (recurrenceMonths > 12) -1 else recurrenceMonths
-            val countToGenerate = recurrenceMonths
+            val countToGenerate = 24 // Gera lançamentos mensais contínuos para os próximos 2 anos
             val items = (0 until countToGenerate).map { index ->
+                val monthDueDate = CurrencyUtils.addMonthsToIsoDate(dueDate, index.toLong())
+                val itemIsPaid = if (index == 0) isPaid else false
+                val itemPaidDate = if (index == 0 && isPaid) paidDate else null
+                Expense(
+                    description = description,
+                    amount = amount,
+                    dueDate = monthDueDate,
+                    category = category,
+                    isPaid = itemIsPaid,
+                    paidDate = itemPaidDate,
+                    recurringGroupId = groupId,
+                    recurringIndex = index + 1,
+                    recurringTotal = -1 // -1 indica recorrência mensal contínua sem prazo definido
+                )
+            }
+            expenseDao.insertExpenses(items)
+        } else {
+            // Parcelado: quantidade definida livremente pelo usuário
+            val groupId = UUID.randomUUID().toString()
+            val total = recurrenceMonths
+            val items = (0 until total).map { index ->
                 val monthDueDate = CurrencyUtils.addMonthsToIsoDate(dueDate, index.toLong())
                 val itemIsPaid = if (index == 0) isPaid else false
                 val itemPaidDate = if (index == 0 && isPaid) paidDate else null

@@ -81,7 +81,6 @@ fun MonthSelector(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
@@ -97,12 +96,15 @@ fun MonthSelector(
             ) {
                 IconButton(
                     onClick = onPreviousMonth,
-                    modifier = Modifier.testTag("btn_prev_month")
+                    modifier = Modifier
+                        .size(38.dp)
+                        .testTag("btn_prev_month")
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Mês Anterior",
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(18.dp)
                     )
                 }
 
@@ -113,8 +115,8 @@ fun MonthSelector(
                     Icon(
                         imageVector = Icons.Default.CalendarToday,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.primary
+                        modifier = Modifier.size(15.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
@@ -127,23 +129,26 @@ fun MonthSelector(
 
                 IconButton(
                     onClick = onNextMonth,
-                    modifier = Modifier.testTag("btn_next_month")
+                    modifier = Modifier
+                        .size(38.dp)
+                        .testTag("btn_next_month")
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                         contentDescription = "Próximo Mês",
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }
 
             if (!isCurrent) {
                 Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
                     modifier = Modifier
-                        .padding(bottom = 4.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                        .padding(bottom = 6.dp)
+                        .clip(RoundedCornerShape(8.dp))
                         .clickable { onResetCurrentMonth() }
                         .testTag("btn_reset_current_month")
                 ) {
@@ -151,7 +156,7 @@ fun MonthSelector(
                         text = "Ir para o mês atual",
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                     )
                 }
@@ -172,22 +177,28 @@ fun StatusBadge(
         PaymentStatus.VENCIDA -> (if (isDark) Color(0xFFF87171) else OverdueRed) to "Vencida"
     }
 
-    Row(
-        modifier = modifier.padding(vertical = 2.dp),
-        verticalAlignment = Alignment.CenterVertically
+    Surface(
+        shape = RoundedCornerShape(6.dp),
+        color = dotColor.copy(alpha = if (isDark) 0.16f else 0.10f),
+        modifier = modifier
     ) {
-        Box(
-            modifier = Modifier
-                .size(7.dp)
-                .background(dotColor, CircleShape)
-        )
-        Spacer(modifier = Modifier.width(5.dp))
-        Text(
-            text = label,
-            color = dotColor,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.SemiBold
-        )
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(6.dp)
+                    .background(dotColor, CircleShape)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = label,
+                color = dotColor,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold
+            )
+        }
     }
 }
 
@@ -200,6 +211,11 @@ fun FinancialMetricCard(
     icon: ImageVector,
     iconColor: Color,
     containerColor: Color = MaterialTheme.colorScheme.surface,
+    border: androidx.compose.foundation.BorderStroke? = null,
+    titleColor: Color? = null,
+    amountColor: Color? = null,
+    subtitleColor: Color? = null,
+    iconBgColor: Color? = null,
     subtitle: String? = null,
     modifier: Modifier = Modifier,
     content: @Composable (() -> Unit)? = null
@@ -210,11 +226,11 @@ fun FinancialMetricCard(
             .testTag("metric_card_${title.lowercase().replace(" ", "_")}"),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = containerColor),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
+        border = border,
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(18.dp)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -223,15 +239,15 @@ fun FinancialMetricCard(
             ) {
                 Text(
                     text = title.uppercase(),
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    letterSpacing = 0.5.sp
+                    color = titleColor ?: MaterialTheme.colorScheme.onSurfaceVariant,
+                    letterSpacing = 0.8.sp
                 )
                 Box(
                     modifier = Modifier
-                        .size(32.dp)
-                        .background(iconColor.copy(alpha = 0.12f), CircleShape),
+                        .size(34.dp)
+                        .background(iconBgColor ?: iconColor.copy(alpha = 0.12f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -243,13 +259,13 @@ fun FinancialMetricCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             Text(
                 text = CurrencyUtils.formatCurrency(amount),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.ExtraBold,
-                color = MaterialTheme.colorScheme.onSurface
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = amountColor ?: MaterialTheme.colorScheme.onSurface
             )
 
             if (!subtitle.isNullOrBlank()) {
@@ -257,12 +273,12 @@ fun FinancialMetricCard(
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = subtitleColor ?: MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
             if (content != null) {
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 content()
             }
         }

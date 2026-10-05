@@ -57,6 +57,8 @@ import com.example.data.model.Expense
 import com.example.data.model.Revenue
 import com.example.ui.theme.LeisurePurple
 import com.example.ui.theme.OverdueRed
+import com.example.ui.theme.PaidGreen
+import com.example.ui.theme.PendingYellow
 import com.example.util.CurrencyUtils
 import java.util.Calendar
 import java.util.Locale
@@ -305,13 +307,21 @@ fun EditExpenseDialog(
                         selected = !isPaid,
                         onClick = { isPaid = false },
                         label = { Text("○ A Pagar", fontWeight = FontWeight.Bold) },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = PendingYellow.copy(alpha = 0.2f),
+                            selectedLabelColor = PendingYellow
+                        )
                     )
                     FilterChip(
                         selected = isPaid,
                         onClick = { isPaid = true },
                         label = { Text("✓ Paga", fontWeight = FontWeight.Bold) },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = PaidGreen.copy(alpha = 0.2f),
+                            selectedLabelColor = PaidGreen
+                        )
                     )
                 }
             }

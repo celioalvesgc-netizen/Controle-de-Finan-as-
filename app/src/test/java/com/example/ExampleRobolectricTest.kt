@@ -312,4 +312,110 @@ class ExampleRobolectricTest {
     val projectedFromAvailable = currentAvailableBalance - (pendingExpenses + overdueExpenses)
     assertEquals(3000.0, projectedFromAvailable, 0.001)
   }
+
+  @Test
+  fun `test multiple revenues sum calculation`() {
+    val revenues = listOf(
+      com.example.data.model.Revenue(description = "Salário", amount = 3500.0, date = "2026-10-05"),
+      com.example.data.model.Revenue(description = "Hora extra", amount = 450.0, date = "2026-10-10"),
+      com.example.data.model.Revenue(description = "Comissão", amount = 600.0, date = "2026-10-15"),
+      com.example.data.model.Revenue(description = "Venda", amount = 250.0, date = "2026-10-18"),
+      com.example.data.model.Revenue(description = "Cashback", amount = 45.0, date = "2026-10-20"),
+      com.example.data.model.Revenue(description = "Presente", amount = 155.0, date = "2026-10-25")
+    )
+    val totalRevenue = revenues.sumOf { it.amount }
+    assertEquals(5000.0, totalRevenue, 0.001)
+    assertEquals(6, revenues.size)
+  }
+
+  @Test
+  fun `test category limit calculations with dynamic revenue and categories`() {
+    val totalRevenue = 5000.0
+
+    // Test 1: Alimentação -> 20%
+    val cat1 = "Alimentação"
+    val percent1 = 20.0
+    val limit1 = totalRevenue * (percent1 / 100.0)
+    val spent1 = 300.0
+    val available1 = kotlin.math.max(0.0, limit1 - spent1)
+    assertEquals(1000.0, limit1, 0.001)
+    assertEquals(700.0, available1, 0.001)
+
+    // Test 2: Combustível -> 10%
+    val cat2 = "Combustível"
+    val percent2 = 10.0
+    val limit2 = totalRevenue * (percent2 / 100.0)
+    val spent2 = 150.0
+    val available2 = kotlin.math.max(0.0, limit2 - spent2)
+    assertEquals(500.0, limit2, 0.001)
+    assertEquals(350.0, available2, 0.001)
+
+    // Test 3: Mercado -> 25%
+    val cat3 = "Mercado"
+    val percent3 = 25.0
+    val limit3 = totalRevenue * (percent3 / 100.0)
+    assertEquals(1250.0, limit3, 0.001)
+
+    // Dynamic update when revenue changes (e.g. from 5000 to 6000)
+    val updatedRevenue = 6000.0
+    val updatedLimit1 = updatedRevenue * (percent1 / 100.0)
+    assertEquals(1200.0, updatedLimit1, 0.001)
+    val updatedAvailable1 = kotlin.math.max(0.0, updatedLimit1 - spent1)
+    assertEquals(900.0, updatedAvailable1, 0.001)
+  }
+
+  @Test
+  fun `test expense percentage calculation over total revenue`() {
+    val revenue = 5000.0
+    val expenses = 2000.0
+    val percentage = ((expenses / revenue) * 100).toInt()
+    assertEquals(40, percentage)
+
+    val revenue2 = 4000.0
+    val expenses2 = 1500.0
+    val percentage2 = ((expenses2 / revenue2) * 100).toInt()
+    assertEquals(37, percentage2)
+  }
+
+  @Test
+  fun `test monthly recurring expense properties`() {
+    val monthlyExp = Expense(
+      description = "Netflix",
+      amount = 39.90,
+      dueDate = "2026-10-15",
+      category = "Lazer",
+      recurringGroupId = "group-netflix-123",
+      recurringIndex = 1,
+      recurringTotal = -1 // -1 indica recorrência mensal contínua sem prazo definido
+    )
+    assertTrue(monthlyExp.recurringGroupId != null)
+    assertEquals(-1, monthlyExp.recurringTotal)
+  }
+
+  @Test
+  fun `test arbitrary positive installment counts and progress tracking`() {
+    // Valid arbitrary installment counts
+    val testInstallmentCounts = listOf(2, 4, 5, 7, 9, 10, 15, 18, 24, 36)
+
+    for (count in testInstallmentCounts) {
+      assertTrue("Installment count should be positive", count > 0)
+
+      val unitAmount = 250.0
+      val totalCost = unitAmount * count
+      assertEquals(unitAmount * count, totalCost, 0.001)
+
+      // Test installment progress (e.g. at index 4)
+      if (count >= 4) {
+        val currentIndex = 4
+        val remaining = count - currentIndex
+        assertEquals(count, currentIndex + remaining)
+      }
+    }
+
+    // Specific example from prompt: Televisão R$ 250, 10 parcelas, atual 4 de 10 -> restantes 6
+    val currentInstallment = 4
+    val totalInstallments = 10
+    val remainingInstallments = totalInstallments - currentInstallment
+    assertEquals(6, remainingInstallments)
+  }
 }

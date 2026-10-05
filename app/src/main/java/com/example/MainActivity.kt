@@ -31,6 +31,8 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -142,6 +144,7 @@ fun MainApp(
     val categories by viewModel.categories.collectAsStateWithLifecycle()
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val expenseFilter by viewModel.expenseFilter.collectAsStateWithLifecycle()
+    val currentRevenues by viewModel.currentMonthRevenues.collectAsStateWithLifecycle()
 
     val addSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val coroutineScope = rememberCoroutineScope()
@@ -155,68 +158,43 @@ fun MainApp(
         topBar = {
             TopAppBar(
                 title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "Meu Financeiro",
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 20.sp,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
+                    Text(
+                        text = "Meu Financeiro",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                ),
-                modifier = Modifier.statusBarsPadding()
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary
+                )
             )
         },
         bottomBar = {
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .shadow(elevation = 12.dp)
-                    .testTag("bottom_nav_bar"),
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 3.dp
+            NavigationBar(
+                modifier = Modifier.testTag("bottom_nav_bar")
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .navigationBarsPadding()
-                        .padding(horizontal = 8.dp, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.SpaceAround,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // 1. Início
-                    BottomNavItem(
-                        label = "Início",
-                        icon = Icons.Default.Home,
-                        isSelected = currentTab == MainTab.INICIO,
-                        onClick = { currentTab = MainTab.INICIO },
-                        testTag = "nav_item_inicio",
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    // 2. Lançamentos (mesmo padrão visual e hierarquia - Regra 3)
-                    BottomNavItem(
-                        label = "Lançamentos",
-                        icon = Icons.Default.Payments,
-                        isSelected = currentTab == MainTab.LANCAMENTOS,
-                        onClick = { currentTab = MainTab.LANCAMENTOS },
-                        testTag = "nav_item_lancamentos",
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    // 3. Ajustes
-                    BottomNavItem(
-                        label = "Ajustes",
-                        icon = Icons.Default.Settings,
-                        isSelected = currentTab == MainTab.AJUSTES,
-                        onClick = { currentTab = MainTab.AJUSTES },
-                        testTag = "nav_item_ajustes",
-                        modifier = Modifier.weight(1f)
-                    )
-                }
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.Home, contentDescription = "Início") },
+                    label = { Text("Início") },
+                    selected = currentTab == MainTab.INICIO,
+                    onClick = { currentTab = MainTab.INICIO },
+                    modifier = Modifier.testTag("nav_item_inicio")
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.Payments, contentDescription = "Lançamentos") },
+                    label = { Text("Lançamentos") },
+                    selected = currentTab == MainTab.LANCAMENTOS,
+                    onClick = { currentTab = MainTab.LANCAMENTOS },
+                    modifier = Modifier.testTag("nav_item_lancamentos")
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.Settings, contentDescription = "Ajustes") },
+                    label = { Text("Ajustes") },
+                    selected = currentTab == MainTab.AJUSTES,
+                    onClick = { currentTab = MainTab.AJUSTES },
+                    modifier = Modifier.testTag("nav_item_ajustes")
+                )
             }
         }
     ) { innerPadding ->
@@ -290,7 +268,7 @@ fun MainApp(
         }
     }
 
-    // Modal Bottom Sheet for adjusting monthly percentages
+    // Modal Bottom Sheet for adjusting monthly percentages and category limit
     if (isPercentagesSheetVisible) {
         com.example.ui.screens.MonthlyPercentagesSheet(
             selectedYearMonth = selectedYearMonth,
@@ -299,8 +277,17 @@ fun MainApp(
             defaultInvestmentPercent = 20.0,
             defaultLeisurePercent = 10.0,
             totalRevenue = summary.totalRevenue,
-            onSavePercentages = { inv, leisure ->
-                viewModel.updateMonthlyPercentages(selectedYearMonth.toString(), inv, leisure)
+            availableCategories = categories,
+            currentCategoryLimitName = summary.categoryLimitName,
+            currentCategoryLimitPercent = summary.categoryLimitPercentage,
+            onSavePercentages = { inv, catName, catPercent ->
+                viewModel.updateMonthlyPercentages(
+                    month = selectedYearMonth.toString(),
+                    invPercent = inv,
+                    leisurePercent = catPercent,
+                    categoryLimitName = catName,
+                    categoryLimitPercent = catPercent
+                )
             },
             onResetToDefault = {
                 viewModel.resetMonthlyPercentagesToDefault(selectedYearMonth.toString())
@@ -309,13 +296,23 @@ fun MainApp(
         )
     }
 
-    // Modal Bottom Sheet for simplified Monthly Revenue (Salário + Renda Extra)
+    // Modal Bottom Sheet for Monthly Revenues management (Multiple Revenues)
     if (isRevenueSheetVisible) {
         com.example.ui.screens.MonthlyRevenueSheet(
             selectedYearMonth = selectedYearMonth,
+            revenues = currentRevenues,
             currentSalary = summary.salary,
             currentExtraIncome = summary.extraIncome,
             onDismiss = { isRevenueSheetVisible = false },
+            onAddRevenue = { desc, amount, date ->
+                viewModel.addRevenue(desc, amount, date)
+            },
+            onEditRevenue = { rev ->
+                revenueToEdit = rev
+            },
+            onDeleteRevenue = { rev ->
+                viewModel.deleteRevenue(rev)
+            },
             onSave = { sal, extra ->
                 viewModel.updateMonthlyRevenue(sal, extra)
             }
@@ -340,14 +337,15 @@ fun MainApp(
             onAddRevenue = { desc, amount, date ->
                 viewModel.addRevenue(desc, amount, date)
             },
-            onAddExpense = { desc, amount, date, isPaid, rec, cat ->
+            onAddExpense = { desc, amount, date, isPaid, rec, cat, isMonthly ->
                 viewModel.addExpense(
                     description = desc,
                     amount = amount,
                     dueDate = date,
                     isPaid = isPaid,
                     recurrenceMonths = rec,
-                    category = cat
+                    category = cat,
+                    isMonthlyRecurring = isMonthly
                 )
             }
         )
@@ -381,38 +379,3 @@ fun MainApp(
     }
 }
 
-@Composable
-fun BottomNavItem(
-    label: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    testTag: String,
-    modifier: Modifier = Modifier
-) {
-    val activeColor = MaterialTheme.colorScheme.primary
-    val inactiveColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-
-    Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
-            .clickable { onClick() }
-            .padding(horizontal = 12.dp, vertical = 6.dp)
-            .testTag(testTag),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = label,
-            tint = if (isSelected) activeColor else inactiveColor,
-            modifier = Modifier.size(24.dp)
-        )
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(
-            text = label,
-            fontSize = 11.sp,
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-            color = if (isSelected) activeColor else inactiveColor
-        )
-    }
-}

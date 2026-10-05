@@ -2,44 +2,97 @@ package com.example.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Primary Brand Colors (Meu Financeiro Emerald)
+// ============================================================
+// Signature Financial Green Theme Palette
+// ============================================================
 val GreenPrimary = Color(0xFF0A6847)
 val GreenOnPrimary = Color(0xFFFFFFFF)
-val GreenPrimaryContainer = Color(0xFFD1E8D5)
-val GreenOnPrimaryContainer = Color(0xFF002111)
+val GreenPrimaryContainer = Color(0xFFD8F3DC)
+val GreenOnPrimaryContainer = Color(0xFF003822)
 
-val GreenSecondary = Color(0xFF4F6353)
-val GreenSecondaryContainer = Color(0xFFD2E8D4)
-val GreenTertiary = Color(0xFF3B6470)
-val GreenTertiaryContainer = Color(0xFFBEEAF7)
+val GreenSecondary = Color(0xFF2D6A4F)
+val GreenOnSecondary = Color(0xFFFFFFFF)
+val GreenSecondaryContainer = Color(0xFFE8F5E9)
+val GreenOnSecondaryContainer = Color(0xFF1B4332)
 
-// Status Colors
-val PaidGreen = Color(0xFF15803D)
+val GreenTertiary = Color(0xFF1E88E5)
+val GreenTertiaryContainer = Color(0xFFD0E4FF)
+
+// ============================================================
+// Status Indicator Colors (Paga / A Pagar / Vencida)
+// ============================================================
+val PaidGreen = Color(0xFF16A34A)
 val PaidGreenBg = Color(0xFFDCFCE7)
 val PaidGreenText = Color(0xFF14532D)
 
-val PendingYellow = Color(0xFFB45309)
-val PendingYellowBg = Color(0xFFFEF9C3)
+val PendingYellow = Color(0xFFD97706)
+val PendingYellowBg = Color(0xFFFEF3C7)
 val PendingYellowText = Color(0xFF78350F)
 
-val OverdueRed = Color(0xFFB91C1C)
+val OverdueRed = Color(0xFFDC2626)
 val OverdueRedBg = Color(0xFFFEE2E2)
 val OverdueRedText = Color(0xFF7F1D1D)
 
-val InvestmentBlue = Color(0xFF0284C7)
-val InvestmentBlueBg = Color(0xFFE0F2FE)
-val InvestmentBlueText = Color(0xFF075985)
+// ============================================================
+// Category & Module Accent Colors
+// ============================================================
+val InvestmentBlue = Color(0xFF2563EB)
+val InvestmentBlueBg = Color(0xFFEFF6FF)
+val InvestmentBlueText = Color(0xFF1D4ED8)
 
 val LeisurePurple = Color(0xFF7C3AED)
-val LeisurePurpleBg = Color(0xFFF3E8FF)
-val LeisurePurpleText = Color(0xFF581C87)
+val LeisurePurpleBg = Color(0xFFF5F3FF)
+val LeisurePurpleText = Color(0xFF6D28D9)
 
 val EmergencyTeal = Color(0xFF0D9488)
-val EmergencyTealBg = Color(0xFFCCFBF1)
+val EmergencyTealBg = Color(0xFFF0FDFA)
 val EmergencyTealText = Color(0xFF115E59)
 
-// Dark Theme Colors
-val GreenPrimaryDark = Color(0xFF7DDA9F)
-val GreenOnPrimaryDark = Color(0xFF00391E)
-val GreenPrimaryContainerDark = Color(0xFF00522E)
-val GreenOnPrimaryContainerDark = Color(0xFF99F7BA)
+// ============================================================
+// Revenue Card Palette (Blue Tonal Theme)
+// ============================================================
+val RevenueCardLightBg = Color(0xFFF0F7FF)
+val RevenueCardLightBorder = Color(0xFFBFDBFE)
+val RevenueCardLightTitle = Color(0xFF1D4ED8)
+val RevenueCardLightIconBg = Color(0xFFDBEAFE)
+val RevenueCardLightIcon = Color(0xFF2563EB)
+val RevenueCardLightAmount = Color(0xFF0F172A)
+val RevenueCardLightSubtitle = Color(0xFF334155)
+
+val RevenueCardDarkBg = Color(0xFF0C1929)
+val RevenueCardDarkBorder = Color(0xFF1E3A8A)
+val RevenueCardDarkTitle = Color(0xFF93C5FD)
+val RevenueCardDarkIconBg = Color(0xFF172554)
+val RevenueCardDarkIcon = Color(0xFF60A5FA)
+val RevenueCardDarkAmount = Color(0xFFF8FAFC)
+val RevenueCardDarkSubtitle = Color(0xFF94A3B8)
+
+// ============================================================
+// Expense Card Palette (Red Tonal Theme)
+// ============================================================
+val ExpenseCardLightBg = Color(0xFFFEF2F2)
+val ExpenseCardLightBorder = Color(0xFFFECACA)
+val ExpenseCardLightTitle = Color(0xFFB91C1C)
+val ExpenseCardLightIconBg = Color(0xFFFEE2E2)
+val ExpenseCardLightIcon = Color(0xFFDC2626)
+val ExpenseCardLightAmount = Color(0xFF0F172A)
+val ExpenseCardLightSubtitle = Color(0xFF334155)
+
+val ExpenseCardDarkBg = Color(0xFF241012)
+val ExpenseCardDarkBorder = Color(0xFF7F1D1D)
+val ExpenseCardDarkTitle = Color(0xFFFCA5A5)
+val ExpenseCardDarkIconBg = Color(0xFF3D1619)
+val ExpenseCardDarkIcon = Color(0xFFF87171)
+val ExpenseCardDarkAmount = Color(0xFFF8FAFC)
+val ExpenseCardDarkSubtitle = Color(0xFF94A3B8)
+
+// ============================================================
+// Dark Theme Green Variants
+// ============================================================
+val GreenPrimaryDark = Color(0xFF52B788)
+val GreenOnPrimaryDark = Color(0xFF003822)
+val GreenPrimaryContainerDark = Color(0xFF1B4332)
+val GreenOnPrimaryContainerDark = Color(0xFFD8F3DC)
+
+
+

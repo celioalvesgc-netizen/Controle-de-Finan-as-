@@ -170,7 +170,6 @@ fun SettingsScreen(
                     .testTag("card_config_aparencia"),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -196,15 +195,15 @@ fun SettingsScreen(
 
                         Box(
                             modifier = Modifier
-                                .size(36.dp)
-                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f), CircleShape),
+                                .size(34.dp)
+                                .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = if (settings.isDarkMode) Icons.Default.DarkMode else Icons.Default.LightMode,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                     }
@@ -220,18 +219,18 @@ fun SettingsScreen(
                         Surface(
                             modifier = Modifier
                                 .weight(1f)
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(RoundedCornerShape(10.dp))
                                 .clickable { onToggleTheme(false) }
                                 .testTag("theme_option_light"),
-                            shape = RoundedCornerShape(12.dp),
+                            shape = RoundedCornerShape(10.dp),
                             color = if (isLight) {
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
+                                MaterialTheme.colorScheme.primaryContainer
                             } else {
-                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                                MaterialTheme.colorScheme.surface
                             },
                             border = BorderStroke(
-                                width = if (isLight) 2.dp else 1.dp,
-                                color = if (isLight) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                width = if (isLight) 1.5.dp else 1.dp,
+                                color = if (isLight) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
                             )
                         ) {
                             Row(
@@ -245,14 +244,14 @@ fun SettingsScreen(
                                     imageVector = Icons.Default.LightMode,
                                     contentDescription = null,
                                     tint = if (isLight) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = "Claro",
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = if (isLight) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isLight) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                    color = if (isLight) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
                                 )
                             }
                         }
@@ -262,18 +261,18 @@ fun SettingsScreen(
                         Surface(
                             modifier = Modifier
                                 .weight(1f)
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(RoundedCornerShape(10.dp))
                                 .clickable { onToggleTheme(true) }
                                 .testTag("theme_option_dark"),
-                            shape = RoundedCornerShape(12.dp),
+                            shape = RoundedCornerShape(10.dp),
                             color = if (isDark) {
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
+                                MaterialTheme.colorScheme.primaryContainer
                             } else {
-                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                                MaterialTheme.colorScheme.surface
                             },
                             border = BorderStroke(
-                                width = if (isDark) 2.dp else 1.dp,
-                                color = if (isDark) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                width = if (isDark) 1.5.dp else 1.dp,
+                                color = if (isDark) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
                             )
                         ) {
                             Row(
@@ -287,14 +286,14 @@ fun SettingsScreen(
                                     imageVector = Icons.Default.DarkMode,
                                     contentDescription = null,
                                     tint = if (isDark) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = "Escuro",
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = if (isDark) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isDark) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                    color = if (isDark) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
                                 )
                             }
                         }
@@ -311,7 +310,6 @@ fun SettingsScreen(
                     .testTag("card_config_notificacoes"),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -339,15 +337,15 @@ fun SettingsScreen(
 
                         Box(
                             modifier = Modifier
-                                .size(36.dp)
-                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f), CircleShape),
+                                .size(34.dp)
+                                .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = if (settings.notificationsEnabled) Icons.Default.NotificationsActive else Icons.Default.NotificationsOff,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                     }
@@ -363,7 +361,7 @@ fun SettingsScreen(
                         Surface(
                             modifier = Modifier
                                 .weight(1f)
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(RoundedCornerShape(10.dp))
                                 .clickable {
                                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                         if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
@@ -384,15 +382,15 @@ fun SettingsScreen(
                                     }
                                 }
                                 .testTag("notifications_option_enabled"),
-                            shape = RoundedCornerShape(12.dp),
+                            shape = RoundedCornerShape(10.dp),
                             color = if (isEnabled) {
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
+                                MaterialTheme.colorScheme.primaryContainer
                             } else {
-                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                                MaterialTheme.colorScheme.surface
                             },
                             border = BorderStroke(
-                                width = if (isEnabled) 2.dp else 1.dp,
-                                color = if (isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                width = if (isEnabled) 1.5.dp else 1.dp,
+                                color = if (isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
                             )
                         ) {
                             Row(
@@ -406,14 +404,14 @@ fun SettingsScreen(
                                     imageVector = Icons.Default.NotificationsActive,
                                     contentDescription = null,
                                     tint = if (isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = "Ativadas",
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = if (isEnabled) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                    color = if (isEnabled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
                                 )
                             }
                         }
@@ -423,21 +421,21 @@ fun SettingsScreen(
                         Surface(
                             modifier = Modifier
                                 .weight(1f)
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(RoundedCornerShape(10.dp))
                                 .clickable {
                                     onToggleNotifications(false)
                                     ExpenseNotificationManager.cancelReminder(context)
                                 }
                                 .testTag("notifications_option_disabled"),
-                            shape = RoundedCornerShape(12.dp),
+                            shape = RoundedCornerShape(10.dp),
                             color = if (isNotEnabled) {
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
+                                MaterialTheme.colorScheme.primaryContainer
                             } else {
-                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                                MaterialTheme.colorScheme.surface
                             },
                             border = BorderStroke(
-                                width = if (isNotEnabled) 2.dp else 1.dp,
-                                color = if (isNotEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                width = if (isNotEnabled) 1.5.dp else 1.dp,
+                                color = if (isNotEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
                             )
                         ) {
                             Row(
@@ -451,14 +449,14 @@ fun SettingsScreen(
                                     imageVector = Icons.Default.NotificationsOff,
                                     contentDescription = null,
                                     tint = if (isNotEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = "Desativadas",
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = if (isNotEnabled) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isNotEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                    color = if (isNotEnabled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
                                 )
                             }
                         }
@@ -475,16 +473,15 @@ fun SettingsScreen(
                     .testTag("card_month_percentages_config"),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         text = "PERCENTUAIS POR MÊS",
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        letterSpacing = 0.5.sp
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        letterSpacing = 0.8.sp
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
@@ -497,9 +494,9 @@ fun SettingsScreen(
 
                     // Navegador de Mês
                     Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
@@ -586,7 +583,7 @@ fun SettingsScreen(
                         Text(
                             text = "${monthInvSlider.roundToInt()}%",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.ExtraBold,
+                            fontWeight = FontWeight.Bold,
                             color = InvestmentBlue
                         )
                     }
@@ -601,7 +598,8 @@ fun SettingsScreen(
                         steps = 49,
                         colors = SliderDefaults.colors(
                             thumbColor = InvestmentBlue,
-                            activeTrackColor = InvestmentBlue
+                            activeTrackColor = InvestmentBlue,
+                            inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant
                         ),
                         modifier = Modifier.testTag("slider_investimento_mes")
                     )
@@ -639,7 +637,7 @@ fun SettingsScreen(
                         Text(
                             text = "${monthLeisureSlider.roundToInt()}%",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.ExtraBold,
+                            fontWeight = FontWeight.Bold,
                             color = LeisurePurple
                         )
                     }
@@ -654,7 +652,8 @@ fun SettingsScreen(
                         steps = 49,
                         colors = SliderDefaults.colors(
                             thumbColor = LeisurePurple,
-                            activeTrackColor = LeisurePurple
+                            activeTrackColor = LeisurePurple,
+                            inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant
                         ),
                         modifier = Modifier.testTag("slider_lazer_mes")
                     )
@@ -676,7 +675,8 @@ fun SettingsScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .testTag("btn_reset_month_percentages"),
-                            shape = RoundedCornerShape(10.dp)
+                            shape = RoundedCornerShape(10.dp),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
                         ) {
                             Icon(Icons.Default.RestartAlt, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
@@ -698,7 +698,6 @@ fun SettingsScreen(
                     .testTag("card_categories_manager"),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -709,9 +708,10 @@ fun SettingsScreen(
                     ) {
                         Text(
                             text = "CATEGORIAS",
-                            style = MaterialTheme.typography.labelMedium,
+                            style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            letterSpacing = 0.8.sp
                         )
 
                         TextButton(
@@ -740,8 +740,7 @@ fun SettingsScreen(
                                     modifier = Modifier
                                         .size(26.dp)
                                         .background(
-                                            if (isLazer) LeisurePurple.copy(alpha = 0.15f)
-                                            else MaterialTheme.colorScheme.surfaceVariant,
+                                            MaterialTheme.colorScheme.surfaceVariant,
                                             CircleShape
                                         ),
                                     contentAlignment = Alignment.Center
@@ -750,28 +749,27 @@ fun SettingsScreen(
                                         imageVector = Icons.Default.Category,
                                         contentDescription = null,
                                         modifier = Modifier.size(14.dp),
-                                        tint = if (isLazer) LeisurePurple else MaterialTheme.colorScheme.onSurfaceVariant
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Text(
                                     text = cat.name,
                                     style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = if (isLazer) FontWeight.SemiBold else FontWeight.Medium,
-                                    color = if (isLazer) LeisurePurple else MaterialTheme.colorScheme.onSurface
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                                 if (!cat.isCustom) {
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Surface(
                                         shape = RoundedCornerShape(4.dp),
-                                        color = if (isLazer) LeisurePurple.copy(alpha = 0.12f)
-                                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
                                     ) {
                                         Text(
                                             text = "Padrão",
                                             fontSize = 9.sp,
                                             modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
-                                            color = if (isLazer) LeisurePurple else MaterialTheme.colorScheme.onSurfaceVariant
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                 }
@@ -802,16 +800,17 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                )
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.Default.Info,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(

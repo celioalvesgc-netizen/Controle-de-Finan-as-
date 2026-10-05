@@ -173,16 +173,25 @@ fun TransactionsScreen(
                 onClick = { showNewTransactionChoice = true },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(50.dp)
+                    .height(48.dp)
                     .testTag("btn_header_add_expense"),
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
             ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "Novo Lançamento",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp,
-                    letterSpacing = 0.5.sp
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold
                 )
             }
         }
@@ -198,16 +207,24 @@ fun TransactionsScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .horizontalScroll(rememberScrollState())
-                    .padding(vertical = 2.dp),
+                    .padding(vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 FilterChip(
                     selected = currentFilter == ExpenseFilter.TODAS,
                     onClick = { onFilterChange(ExpenseFilter.TODAS) },
-                    label = { Text("Todas", fontWeight = FontWeight.Bold) },
+                    label = { Text("Todas", style = MaterialTheme.typography.labelMedium) },
+                    shape = RoundedCornerShape(10.dp),
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    ),
+                    border = BorderStroke(
+                        1.dp,
+                        if (currentFilter == ExpenseFilter.TODAS) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
                     ),
                     modifier = Modifier.testTag("filter_chip_todas")
                 )
@@ -215,21 +232,57 @@ fun TransactionsScreen(
                 FilterChip(
                     selected = currentFilter == ExpenseFilter.A_PAGAR,
                     onClick = { onFilterChange(ExpenseFilter.A_PAGAR) },
-                    label = { Text("○ A Pagar", fontWeight = FontWeight.Bold) },
+                    label = { Text("A Pagar", style = MaterialTheme.typography.labelMedium) },
+                    shape = RoundedCornerShape(10.dp),
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    ),
+                    border = BorderStroke(
+                        1.dp,
+                        if (currentFilter == ExpenseFilter.A_PAGAR) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+                    ),
                     modifier = Modifier.testTag("filter_chip_a_pagar")
                 )
 
                 FilterChip(
                     selected = currentFilter == ExpenseFilter.PAGAS,
                     onClick = { onFilterChange(ExpenseFilter.PAGAS) },
-                    label = { Text("✓ Pagas", fontWeight = FontWeight.Bold) },
+                    label = { Text("Pagas", style = MaterialTheme.typography.labelMedium) },
+                    shape = RoundedCornerShape(10.dp),
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    ),
+                    border = BorderStroke(
+                        1.dp,
+                        if (currentFilter == ExpenseFilter.PAGAS) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+                    ),
                     modifier = Modifier.testTag("filter_chip_pagas")
                 )
 
                 FilterChip(
                     selected = currentFilter == ExpenseFilter.VENCIDAS,
                     onClick = { onFilterChange(ExpenseFilter.VENCIDAS) },
-                    label = { Text("! Vencidas", fontWeight = FontWeight.Bold) },
+                    label = { Text("Vencidas", style = MaterialTheme.typography.labelMedium) },
+                    shape = RoundedCornerShape(10.dp),
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    ),
+                    border = BorderStroke(
+                        1.dp,
+                        if (currentFilter == ExpenseFilter.VENCIDAS) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+                    ),
                     modifier = Modifier.testTag("filter_chip_vencidas")
                 )
             }
@@ -401,8 +454,7 @@ fun TransactionsScreen(
                         .testTag("choice_option_despesa"),
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
                     Row(
                         modifier = Modifier
@@ -412,18 +464,18 @@ fun TransactionsScreen(
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(44.dp)
-                                .background(MaterialTheme.colorScheme.error.copy(alpha = 0.12f), CircleShape),
+                                .size(40.dp)
+                                .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.CreditCard,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.size(24.dp)
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(20.dp)
                             )
                         }
-                        Spacer(modifier = Modifier.width(16.dp))
+                        Spacer(modifier = Modifier.width(14.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "Despesa",
@@ -454,8 +506,7 @@ fun TransactionsScreen(
                         .testTag("choice_option_receita"),
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
                     Row(
                         modifier = Modifier
@@ -465,18 +516,18 @@ fun TransactionsScreen(
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(44.dp)
-                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f), CircleShape),
+                                .size(40.dp)
+                                .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.TrendingUp,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(24.dp)
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(20.dp)
                             )
                         }
-                        Spacer(modifier = Modifier.width(16.dp))
+                        Spacer(modifier = Modifier.width(14.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "Receita",
@@ -513,13 +564,12 @@ fun MonthlyExpenseSummaryCard(
             .testTag("card_expense_summary"),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(18.dp)
         ) {
             // Linha Principal: Total de Despesas do Mês
             Row(
@@ -529,22 +579,22 @@ fun MonthlyExpenseSummaryCard(
             ) {
                 Text(
                     text = "TOTAL DO MÊS",
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    letterSpacing = 0.5.sp
+                    letterSpacing = 0.8.sp
                 )
                 Text(
                     text = CurrencyUtils.formatCurrency(summary.totalExpenses),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Black,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
-            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            Spacer(modifier = Modifier.height(12.dp))
 
             // Sub-métricas: A Pagar | Pagas | Vencidas
             Row(
@@ -563,7 +613,7 @@ fun MonthlyExpenseSummaryCard(
                     Text(
                         text = CurrencyUtils.formatCurrency(summary.totalPending),
                         style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.ExtraBold,
+                        fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
@@ -580,7 +630,7 @@ fun MonthlyExpenseSummaryCard(
                     Text(
                         text = CurrencyUtils.formatCurrency(summary.totalPaid),
                         style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.ExtraBold,
+                        fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
@@ -597,7 +647,7 @@ fun MonthlyExpenseSummaryCard(
                     Text(
                         text = CurrencyUtils.formatCurrency(summary.totalOverdue),
                         style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.ExtraBold,
+                        fontWeight = FontWeight.Bold,
                         color = if (summary.totalOverdue > 0) OverdueRed else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -647,22 +697,18 @@ fun IntuitiveExpenseCard(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        border = BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(IntrinsicSize.Min)
         ) {
-            // 1. Faixa lateral colorida no card (6.dp) para identificação rápida imediata
+            // 1. Faixa lateral colorida no card (5.dp) para identificação rápida imediata
             Box(
                 modifier = Modifier
                     .fillMaxHeight()
-                    .width(6.dp)
+                    .width(5.dp)
                     .background(statusColor)
             )
 
@@ -682,21 +728,42 @@ fun IntuitiveExpenseCard(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text(
-                            text = expense.description,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1
-                        )
-                        if (isRecurring) {
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Icon(
-                                imageVector = Icons.Default.Autorenew,
-                                contentDescription = "Recorrente",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                modifier = Modifier.size(14.dp)
-                            )
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = expense.description,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1
+                                )
+                                if (isRecurring) {
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Icon(
+                                        imageVector = Icons.Default.Autorenew,
+                                        contentDescription = "Recorrente",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                }
+                            }
+
+                            if (expense.recurringTotal > 1) {
+                                val remaining = kotlin.math.max(0, expense.recurringTotal - expense.recurringIndex)
+                                Text(
+                                    text = "Parcela ${expense.recurringIndex} de ${expense.recurringTotal} • $remaining restantes",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            } else if (expense.recurringTotal == -1) {
+                                Text(
+                                    text = "Mensal",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
                         }
                     }
 
@@ -706,14 +773,14 @@ fun IntuitiveExpenseCard(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             modifier = Modifier
-                                .size(8.dp)
+                                .size(7.dp)
                                 .background(statusColor, CircleShape)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = CurrencyUtils.formatCurrency(expense.amount),
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Black,
+                            fontWeight = FontWeight.Bold,
                             color = if (expense.isPaid || status == PaymentStatus.VENCIDA) {
                                 statusColor
                             } else {
@@ -731,15 +798,15 @@ fun IntuitiveExpenseCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // 3. Indicador colorido e ícone próximo à data de vencimento (sem textos "PAGA" / "A PAGAR")
+                    // 3. Indicador colorido e ícone próximo à data de vencimento
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.weight(1f, fill = false)
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(22.dp)
-                                .background(statusColor.copy(alpha = if (isDark) 0.22f else 0.14f), CircleShape),
+                                .size(20.dp)
+                                .background(statusColor.copy(alpha = if (isDark) 0.22f else 0.12f), CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -750,7 +817,7 @@ fun IntuitiveExpenseCard(
                                 },
                                 contentDescription = null,
                                 tint = statusColor,
-                                modifier = Modifier.size(13.dp)
+                                modifier = Modifier.size(12.dp)
                             )
                         }
                         Spacer(modifier = Modifier.width(8.dp))
@@ -774,7 +841,7 @@ fun IntuitiveExpenseCard(
 
                     // 4. Botão de Ação: Diferenciação destacada entre 🟢 Paga (botão) e 🟡 A Pagar (botão)
                     Surface(
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(10.dp),
                         color = when (status) {
                             PaymentStatus.PAGA -> if (isDark) Color(0xFF14532D) else Color(0xFFDCFCE7)
                             PaymentStatus.A_PAGAR -> if (isDark) Color(0xFF422006).copy(alpha = 0.55f) else Color(0xFFFEF3C7)
@@ -782,20 +849,20 @@ fun IntuitiveExpenseCard(
                         },
                         border = BorderStroke(
                             1.dp,
-                            statusColor
+                            statusColor.copy(alpha = 0.7f)
                         ),
                         modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
+                            .clip(RoundedCornerShape(10.dp))
                             .clickable { onTogglePaid() }
                             .testTag(if (expense.isPaid) "btn_unmark_paid_${expense.id}" else "btn_quick_mark_paid_${expense.id}")
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(9.dp)
+                                    .size(8.dp)
                                     .background(statusColor, CircleShape)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
@@ -807,7 +874,7 @@ fun IntuitiveExpenseCard(
                                 },
                                 contentDescription = if (expense.isPaid) "Despesa Paga" else "Marcar como Paga",
                                 tint = statusColor,
-                                modifier = Modifier.size(15.dp)
+                                modifier = Modifier.size(14.dp)
                             )
                         }
                     }
@@ -923,8 +990,11 @@ fun ExpenseDetailsSheet(
                 }
             }
 
-            // Seção de recorrência quando aplicável (Regra 9)
+            // Seção de recorrência quando aplicável (Requisito 6)
             if (isRecurring && groupOccurrences.isNotEmpty()) {
+                val isInstallment = expense.recurringTotal > 1
+                val remainingInstallments = if (isInstallment) kotlin.math.max(0, expense.recurringTotal - expense.recurringIndex) else 0
+
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Row(
@@ -940,12 +1010,27 @@ fun ExpenseDetailsSheet(
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "DESPESA RECORRENTE",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                        Column {
+                            Text(
+                                text = if (isInstallment) "PARCELAMENTO" else "RECORRÊNCIA MENSAL",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            if (isInstallment) {
+                                Text(
+                                    text = "Parcela atual: ${expense.recurringIndex} de ${expense.recurringTotal} • $remainingInstallments restantes",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            } else {
+                                Text(
+                                    text = "Sem prazo definido (contínua até encerramento)",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                     }
 
                     Text(

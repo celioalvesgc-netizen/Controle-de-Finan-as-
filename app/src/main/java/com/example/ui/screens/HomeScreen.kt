@@ -19,12 +19,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.SportsEsports
-import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -40,6 +40,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -48,11 +50,37 @@ import com.example.data.model.Expense
 import com.example.ui.components.FinancialMetricCard
 import com.example.ui.components.MonthSelector
 import com.example.ui.theme.EmergencyTeal
+import com.example.ui.theme.ExpenseCardDarkAmount
+import com.example.ui.theme.ExpenseCardDarkBg
+import com.example.ui.theme.ExpenseCardDarkBorder
+import com.example.ui.theme.ExpenseCardDarkIcon
+import com.example.ui.theme.ExpenseCardDarkIconBg
+import com.example.ui.theme.ExpenseCardDarkTitle
+import com.example.ui.theme.ExpenseCardLightAmount
+import com.example.ui.theme.ExpenseCardLightBg
+import com.example.ui.theme.ExpenseCardLightBorder
+import com.example.ui.theme.ExpenseCardLightIcon
+import com.example.ui.theme.ExpenseCardLightIconBg
+import com.example.ui.theme.ExpenseCardLightTitle
 import com.example.ui.theme.InvestmentBlue
 import com.example.ui.theme.LeisurePurple
 import com.example.ui.theme.OverdueRed
 import com.example.ui.theme.PaidGreen
 import com.example.ui.theme.PendingYellow
+import com.example.ui.theme.RevenueCardDarkAmount
+import com.example.ui.theme.RevenueCardDarkBg
+import com.example.ui.theme.RevenueCardDarkBorder
+import com.example.ui.theme.RevenueCardDarkIcon
+import com.example.ui.theme.RevenueCardDarkIconBg
+import com.example.ui.theme.RevenueCardDarkSubtitle
+import com.example.ui.theme.RevenueCardDarkTitle
+import com.example.ui.theme.RevenueCardLightAmount
+import com.example.ui.theme.RevenueCardLightBg
+import com.example.ui.theme.RevenueCardLightBorder
+import com.example.ui.theme.RevenueCardLightIcon
+import com.example.ui.theme.RevenueCardLightIconBg
+import com.example.ui.theme.RevenueCardLightSubtitle
+import com.example.ui.theme.RevenueCardLightTitle
 import com.example.ui.viewmodel.FinanceSummary
 import com.example.util.CurrencyUtils
 import java.time.YearMonth
@@ -101,19 +129,41 @@ fun HomeScreen(
             )
         }
 
-        // 1. RECEITA DO MÊS (Salário + Renda Extra)
+        // 1. RECEITA DO MÊS (Paleta Azul, múltiplas receitas, sem Salário/Renda Extra fixos)
         item {
+            val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+
+            val revBg = if (isDark) RevenueCardDarkBg else RevenueCardLightBg
+            val revBorder = if (isDark) RevenueCardDarkBorder else RevenueCardLightBorder
+            val revTitle = if (isDark) RevenueCardDarkTitle else RevenueCardLightTitle
+            val revIcon = if (isDark) RevenueCardDarkIcon else RevenueCardLightIcon
+            val revIconBg = if (isDark) RevenueCardDarkIconBg else RevenueCardLightIconBg
+            val revAmount = if (isDark) RevenueCardDarkAmount else RevenueCardLightAmount
+            val revSubtitle = if (isDark) RevenueCardDarkSubtitle else RevenueCardLightSubtitle
+
             val revenueSubtitle = if (summary.totalRevenue > 0) {
-                "Salário: ${CurrencyUtils.formatCurrency(summary.salary)} • Renda Extra: ${CurrencyUtils.formatCurrency(summary.extraIncome)}"
+                if (summary.revenuesCount > 1) {
+                    "${summary.revenuesCount} receitas cadastradas • Toque para gerenciar"
+                } else if (summary.revenuesCount == 1) {
+                    "1 receita cadastrada • Toque para gerenciar"
+                } else {
+                    "Toque para ver ou gerenciar receitas"
+                }
             } else {
-                "Toque para informar Salário e Renda Extra"
+                "Toque para adicionar receitas do mês"
             }
 
             FinancialMetricCard(
                 title = "Receita do Mês",
                 amount = summary.totalRevenue,
-                icon = Icons.Default.TrendingUp,
-                iconColor = MaterialTheme.colorScheme.primary,
+                icon = Icons.AutoMirrored.Filled.TrendingUp,
+                iconColor = revIcon,
+                iconBgColor = revIconBg,
+                containerColor = revBg,
+                border = BorderStroke(1.dp, revBorder),
+                titleColor = revTitle,
+                amountColor = revAmount,
+                subtitleColor = revSubtitle,
                 subtitle = revenueSubtitle,
                 modifier = Modifier
                     .clip(RoundedCornerShape(16.dp))
@@ -122,18 +172,31 @@ fun HomeScreen(
             )
         }
 
-        // 2. DESPESAS DO MÊS (com PAGO, A PAGAR, VENCIDO)
+        // 2. DESPESAS DO MÊS (Paleta Vermelha, Percentual da Receita, com PAGO, A PAGAR, VENCIDO)
         item {
+            val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+
+            val expBg = if (isDark) ExpenseCardDarkBg else ExpenseCardLightBg
+            val expBorder = if (isDark) ExpenseCardDarkBorder else ExpenseCardLightBorder
+            val expTitle = if (isDark) ExpenseCardDarkTitle else ExpenseCardLightTitle
+            val expIcon = if (isDark) ExpenseCardDarkIcon else ExpenseCardLightIcon
+            val expIconBg = if (isDark) ExpenseCardDarkIconBg else ExpenseCardLightIconBg
+            val expAmount = if (isDark) ExpenseCardDarkAmount else ExpenseCardLightAmount
+
+            val expensePercentage = if (summary.totalRevenue > 0) {
+                ((summary.totalExpenses / summary.totalRevenue) * 100).roundToInt()
+            } else null
+
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("card_despesas_resumo"),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
+                colors = CardDefaults.cardColors(containerColor = expBg),
+                border = BorderStroke(1.dp, expBorder),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(18.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -141,37 +204,59 @@ fun HomeScreen(
                     ) {
                         Text(
                             text = "DESPESAS",
-                            style = MaterialTheme.typography.labelMedium,
+                            style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            letterSpacing = 0.5.sp
+                            color = expTitle,
+                            letterSpacing = 0.8.sp
                         )
                         Box(
                             modifier = Modifier
-                                .size(32.dp)
-                                .background(MaterialTheme.colorScheme.error.copy(alpha = 0.1f), CircleShape),
+                                .size(34.dp)
+                                .background(expIconBg, CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.CreditCard,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.error,
+                                tint = expIcon,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                    Text(
-                        text = CurrencyUtils.formatCurrency(summary.totalExpenses),
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = CurrencyUtils.formatCurrency(summary.totalExpenses),
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = expAmount
+                        )
+
+                        if (expensePercentage != null) {
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = if (isDark) Color(0xFF3D1619) else Color(0xFFFEE2E2),
+                                border = BorderStroke(1.dp, if (isDark) Color(0xFF5A1A1E) else Color(0xFFFECACA))
+                            ) {
+                                Text(
+                                    text = "$expensePercentage% da receita",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (isDark) Color(0xFFFCA5A5) else Color(0xFF991B1B),
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                )
+                            }
+                        }
+                    }
 
                     Spacer(modifier = Modifier.height(14.dp))
-                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+                    HorizontalDivider(color = expBorder.copy(alpha = 0.6f))
                     Spacer(modifier = Modifier.height(14.dp))
 
                     // 3 colunas: PAGO | A PAGAR | VENCIDO
@@ -184,10 +269,10 @@ fun HomeScreen(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Box(
                                     modifier = Modifier
-                                        .size(8.dp)
+                                        .size(6.dp)
                                         .background(PaidGreen, CircleShape)
                                 )
-                                Spacer(modifier = Modifier.width(5.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
                                 Text(
                                     text = "PAGO",
                                     fontSize = 11.sp,
@@ -209,10 +294,10 @@ fun HomeScreen(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Box(
                                     modifier = Modifier
-                                        .size(8.dp)
+                                        .size(6.dp)
                                         .background(PendingYellow, CircleShape)
                                 )
-                                Spacer(modifier = Modifier.width(5.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
                                 Text(
                                     text = "A PAGAR",
                                     fontSize = 11.sp,
@@ -234,10 +319,10 @@ fun HomeScreen(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Box(
                                     modifier = Modifier
-                                        .size(8.dp)
+                                        .size(6.dp)
                                         .background(OverdueRed, CircleShape)
                                 )
-                                Spacer(modifier = Modifier.width(5.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
                                 Text(
                                     text = "VENCIDO",
                                     fontSize = 11.sp,
@@ -273,16 +358,19 @@ fun HomeScreen(
             )
         }
 
-        // 4. LAZER (Limite Recomendado, Utilizado, Restante e Percentual Consumido)
+        // 4. LIMITE POR CATEGORIA (Flexível: o usuário pode escolher qualquer categoria para definir o teto percentual)
         item {
-            val isOverLimit = summary.leisureLimit > 0 && summary.leisureSpent > summary.leisureLimit
-            val overAmount = if (isOverLimit) summary.leisureSpent - summary.leisureLimit else 0.0
-            val percentConsumed = if (summary.leisureLimit > 0) {
-                ((summary.leisureSpent / summary.leisureLimit) * 100).roundToInt()
+            val catLimitName = summary.categoryLimitName.ifBlank { "Lazer" }
+            val isOverLimit = summary.categoryLimitAmount > 0 && summary.categoryLimitSpent > summary.categoryLimitAmount
+            val overAmount = if (isOverLimit) summary.categoryLimitSpent - summary.categoryLimitAmount else 0.0
+            val percentConsumed = if (summary.categoryLimitAmount > 0) {
+                ((summary.categoryLimitSpent / summary.categoryLimitAmount) * 100).roundToInt()
             } else 0
-            val leisureRatio = if (summary.leisureLimit > 0) {
-                (summary.leisureSpent / summary.leisureLimit).toFloat().coerceIn(0f, 1f)
+            val categoryRatio = if (summary.categoryLimitAmount > 0) {
+                (summary.categoryLimitSpent / summary.categoryLimitAmount).toFloat().coerceIn(0f, 1f)
             } else 0f
+
+            val accentColor = if (isOverLimit) OverdueRed else LeisurePurple
 
             Card(
                 modifier = Modifier
@@ -292,43 +380,44 @@ fun HomeScreen(
                     .testTag("card_lazer_resumo"),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, if (isOverLimit) OverdueRed.copy(alpha = 0.5f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
+                border = if (isOverLimit) BorderStroke(1.dp, OverdueRed.copy(alpha = 0.5f)) else null,
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(18.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "LIMITE RECOMENDADO PARA LAZER",
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isOverLimit) OverdueRed else LeisurePurple,
-                                letterSpacing = 0.5.sp
-                            )
-                            Text(
-                                text = "${String.format("%.0f", summary.leisurePercentage)}% da receita (${CurrencyUtils.formatCurrency(summary.leisureLimit)}) • Toque para ajustar",
+                                text = "LIMITE POR CATEGORIA • ${catLimitName.uppercase()}",
                                 style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isOverLimit) OverdueRed else MaterialTheme.colorScheme.onSurfaceVariant,
+                                letterSpacing = 0.8.sp
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "${String.format("%.0f", summary.categoryLimitPercentage)}% da receita (${CurrencyUtils.formatCurrency(summary.categoryLimitAmount)}) • Toque para alterar",
+                                style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                             )
                         }
+                        Spacer(modifier = Modifier.width(8.dp))
                         Box(
                             modifier = Modifier
-                                .size(32.dp)
+                                .size(34.dp)
                                 .background(
-                                    if (isOverLimit) OverdueRed.copy(alpha = 0.12f)
-                                    else LeisurePurple.copy(alpha = 0.12f),
+                                    accentColor.copy(alpha = 0.12f),
                                     CircleShape
                                 ),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Default.SportsEsports,
+                                imageVector = if (catLimitName.equals("Lazer", ignoreCase = true)) Icons.Default.SportsEsports else Icons.Default.Category,
                                 contentDescription = null,
-                                tint = if (isOverLimit) OverdueRed else LeisurePurple,
+                                tint = accentColor,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -343,33 +432,33 @@ fun HomeScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = if (isOverLimit) "Acima do limite recomendado" else "Consumo do limite recomendado",
+                            text = if (isOverLimit) "Acima do limite estabelecido" else "Consumo do limite de $catLimitName",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Surface(
                             shape = RoundedCornerShape(6.dp),
-                            color = if (isOverLimit) OverdueRed.copy(alpha = 0.12f) else LeisurePurple.copy(alpha = 0.12f)
+                            color = accentColor.copy(alpha = 0.12f)
                         ) {
                             Text(
                                 text = "$percentConsumed% consumido",
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = if (isOverLimit) OverdueRed else LeisurePurple,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                color = accentColor,
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     LinearProgressIndicator(
-                        progress = { leisureRatio },
+                        progress = { categoryRatio },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(8.dp)
-                            .clip(RoundedCornerShape(4.dp)),
-                        color = if (isOverLimit) OverdueRed else LeisurePurple,
+                            .height(6.dp)
+                            .clip(RoundedCornerShape(3.dp)),
+                        color = accentColor,
                         trackColor = MaterialTheme.colorScheme.surfaceVariant,
                     )
 
@@ -389,7 +478,7 @@ fun HomeScreen(
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = CurrencyUtils.formatCurrency(summary.leisureLimit),
+                                text = CurrencyUtils.formatCurrency(summary.categoryLimitAmount),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
@@ -405,10 +494,10 @@ fun HomeScreen(
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = CurrencyUtils.formatCurrency(summary.leisureSpent),
+                                text = CurrencyUtils.formatCurrency(summary.categoryLimitSpent),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = if (isOverLimit) OverdueRed else LeisurePurple
+                                color = if (isOverLimit) OverdueRed else MaterialTheme.colorScheme.onSurface
                             )
                         }
 
@@ -421,10 +510,10 @@ fun HomeScreen(
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = CurrencyUtils.formatCurrency(summary.leisureAvailable),
+                                text = CurrencyUtils.formatCurrency(summary.categoryLimitAvailable),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = if (summary.leisureAvailable > 0) PaidGreen else MaterialTheme.colorScheme.onSurfaceVariant
+                                color = if (summary.categoryLimitAvailable > 0) PaidGreen else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -434,8 +523,8 @@ fun HomeScreen(
                         Spacer(modifier = Modifier.height(12.dp))
                         Surface(
                             shape = RoundedCornerShape(10.dp),
-                            color = OverdueRed.copy(alpha = 0.1f),
-                            border = BorderStroke(1.dp, OverdueRed.copy(alpha = 0.35f)),
+                            color = OverdueRed.copy(alpha = 0.08f),
+                            border = BorderStroke(1.dp, OverdueRed.copy(alpha = 0.3f)),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Row(
@@ -446,11 +535,11 @@ fun HomeScreen(
                                     imageVector = Icons.Default.Warning,
                                     contentDescription = null,
                                     tint = OverdueRed,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "Você ultrapassou o limite recomendado para lazer deste mês em ${CurrencyUtils.formatCurrency(overAmount)}.",
+                                    text = "Você ultrapassou o limite estabelecido para $catLimitName deste mês em ${CurrencyUtils.formatCurrency(overAmount)}.",
                                     style = MaterialTheme.typography.bodySmall,
                                     fontWeight = FontWeight.SemiBold,
                                     color = OverdueRed
@@ -473,10 +562,9 @@ fun HomeScreen(
                     .testTag("card_fundo_emergencia"),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(18.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -484,14 +572,14 @@ fun HomeScreen(
                     ) {
                         Text(
                             text = "SALDO DISPONÍVEL",
-                            style = MaterialTheme.typography.labelMedium,
+                            style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
-                            color = EmergencyTeal,
-                            letterSpacing = 0.5.sp
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            letterSpacing = 0.8.sp
                         )
                         Box(
                             modifier = Modifier
-                                .size(32.dp)
+                                .size(34.dp)
                                 .background(EmergencyTeal.copy(alpha = 0.12f), CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
@@ -504,12 +592,12 @@ fun HomeScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
                         text = CurrencyUtils.formatCurrency(displayedAmount),
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.ExtraBold,
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
 
@@ -522,9 +610,9 @@ fun HomeScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -553,7 +641,7 @@ fun HomeScreen(
                             Text(
                                 text = "Somar outros meses",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = if (isSumming) EmergencyTeal else MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 fontWeight = if (isSumming) FontWeight.Bold else FontWeight.Medium
                             )
                             Spacer(modifier = Modifier.width(6.dp))
@@ -577,10 +665,9 @@ fun HomeScreen(
                         .testTag("card_gastos_por_categoria"),
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
+                    Column(modifier = Modifier.padding(18.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -588,26 +675,37 @@ fun HomeScreen(
                         ) {
                             Text(
                                 text = "GASTOS POR CATEGORIA",
-                                style = MaterialTheme.typography.labelMedium,
+                                style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                letterSpacing = 0.5.sp
+                                letterSpacing = 0.8.sp
                             )
                             Icon(
                                 imageVector = Icons.Default.Category,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(16.dp)
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(10.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
                         val totalAmount = categoryTotals.sumOf { it.second }
+                        val categoryColors = listOf(
+                            Color(0xFF0A6847),
+                            InvestmentBlue,
+                            LeisurePurple,
+                            EmergencyTeal,
+                            Color(0xFFD97706),
+                            Color(0xFFEA580C),
+                            Color(0xFFE11D48),
+                            Color(0xFF6366F1)
+                        )
 
                         categoryTotals.forEachIndexed { index, (category, amount) ->
                             val percentage = if (totalAmount > 0) (amount / totalAmount).toFloat() else 0f
                             val percentText = String.format("%.0f%%", percentage * 100)
+                            val barColor = categoryColors[index % categoryColors.size]
 
                             Column(modifier = Modifier.padding(vertical = 3.dp)) {
                                 Row(
@@ -637,7 +735,7 @@ fun HomeScreen(
                                     }
                                 }
 
-                                Spacer(modifier = Modifier.height(3.dp))
+                                Spacer(modifier = Modifier.height(4.dp))
 
                                 LinearProgressIndicator(
                                     progress = { percentage },
@@ -645,13 +743,13 @@ fun HomeScreen(
                                         .fillMaxWidth()
                                         .height(4.dp)
                                         .clip(RoundedCornerShape(2.dp)),
-                                    color = MaterialTheme.colorScheme.primary,
+                                    color = barColor,
                                     trackColor = MaterialTheme.colorScheme.surfaceVariant
                                 )
                             }
 
                             if (index < categoryTotals.size - 1) {
-                                Spacer(modifier = Modifier.height(4.dp))
+                                Spacer(modifier = Modifier.height(6.dp))
                             }
                         }
                     }

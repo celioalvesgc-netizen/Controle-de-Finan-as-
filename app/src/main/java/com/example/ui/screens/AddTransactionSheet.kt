@@ -21,13 +21,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
+import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Payments
-import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -76,6 +78,12 @@ enum class TransactionType {
     DESPESA
 }
 
+enum class RecurrenceType {
+    UNICA,
+    MENSAL,
+    PARCELADO
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddTransactionSheet(
@@ -90,23 +98,17 @@ fun AddTransactionSheet(
     onDismiss: () -> Unit,
     onSaveMonthlyRevenue: (salary: Double, extraIncome: Double) -> Unit = { _, _ -> },
     onAddRevenue: (description: String, amount: Double, date: String) -> Unit = { _, _, _ -> },
-    onAddExpense: (description: String, amount: Double, dueDate: String, isPaid: Boolean, recurrenceMonths: Int, category: String) -> Unit
+    onAddExpense: (
+        description: String,
+        amount: Double,
+        dueDate: String,
+        isPaid: Boolean,
+        recurrenceMonths: Int,
+        category: String,
+        isMonthlyRecurring: Boolean
+    ) -> Unit
 ) {
     var transactionType by remember(initialType) { mutableStateOf(initialType) }
-
-    // Revenue state
-    var salaryText by remember(currentSalary) {
-        mutableStateOf(if (currentSalary > 0.0) String.format("%.2f", currentSalary).replace(".", ",") else "")
-    }
-    var extraIncomeText by remember(currentExtraIncome) {
-        mutableStateOf(if (currentExtraIncome > 0.0) String.format("%.2f", currentExtraIncome).replace(".", ",") else "")
-    }
-
-    // Expense state
-    var description by remember { mutableStateOf("") }
-    var amountText by remember { mutableStateOf("") }
-    var selectedCategory by remember { mutableStateOf<String?>(null) }
-    var categoryError by remember { mutableStateOf(false) }
 
     val initialDate = remember(selectedYearMonth) {
         val now = LocalDate.now()
@@ -117,16 +119,31 @@ fun AddTransactionSheet(
         }
     }
 
+    // Revenue state
+    var revenueDescription by remember { mutableStateOf("") }
+    var revenueAmountText by remember { mutableStateOf("") }
+    var revenueDateIso by remember { mutableStateOf(initialDate) }
+    var revenueHasError by remember { mutableStateOf(false) }
+
+    // Expense state
+    var description by remember { mutableStateOf("") }
+    var amountText by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf<String?>(null) }
+    var categoryError by remember { mutableStateOf(false) }
     var dateIso by remember { mutableStateOf(initialDate) }
-    var isExpensePaid by remember { mutableStateOf(false) } // Default: A Pagar (false)
-    var recurrenceOption by remember { mutableIntStateOf(1) } // 1 = à vista, 2..12 = parcelas/meses
+    var isExpensePaid by remember { mutableStateOf(false) }
+
+    // Recorrência: Única, Mensal, Parcelado (Requisito 6)
+    var recurrenceType by remember { mutableStateOf(RecurrenceType.UNICA) }
+    var installmentsText by remember { mutableStateOf("2") }
     var hasError by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
 
-    fun showDatePicker() {
+    fun showDatePicker(isForRevenue: Boolean) {
         val calendar = Calendar.getInstance()
-        val parts = dateIso.split("-")
+        val targetDate = if (isForRevenue) revenueDateIso else dateIso
+        val parts = targetDate.split("-")
         if (parts.size == 3) {
             parts[0].toIntOrNull()?.let { calendar.set(Calendar.YEAR, it) }
             parts[1].toIntOrNull()?.let { calendar.set(Calendar.MONTH, it - 1) }
@@ -135,8 +152,14 @@ fun AddTransactionSheet(
         DatePickerDialog(
             context,
             { _, year, month, dayOfMonth ->
-                dateIso = String.format(Locale.US, "%04d-%02d-%02d", year, month + 1, dayOfMonth)
-                hasError = false
+                val chosen = String.format(Locale.US, "%04d-%02d-%02d", year, month + 1, dayOfMonth)
+                if (isForRevenue) {
+                    revenueDateIso = chosen
+                    revenueHasError = false
+                } else {
+                    dateIso = chosen
+                    hasError = false
+                }
             },
             calendar.get(Calendar.YEAR),
             calendar.get(Calendar.MONTH),
@@ -174,24 +197,42 @@ fun AddTransactionSheet(
                 FilterChip(
                     selected = transactionType == TransactionType.DESPESA,
                     onClick = { transactionType = TransactionType.DESPESA },
-                    label = { Text("💳 Despesa", fontWeight = FontWeight.Bold) },
+                    label = { Text("💳 Despesa", style = MaterialTheme.typography.labelMedium) },
                     modifier = Modifier
                         .weight(1f)
                         .testTag("chip_type_despesa"),
+                    shape = RoundedCornerShape(12.dp),
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
+                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    ),
+                    border = BorderStroke(
+                        1.dp,
+                        if (transactionType == TransactionType.DESPESA) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
                     )
                 )
 
                 FilterChip(
                     selected = transactionType == TransactionType.RECEITA,
                     onClick = { transactionType = TransactionType.RECEITA },
-                    label = { Text("💰 Receita", fontWeight = FontWeight.Bold) },
+                    label = { Text("💰 Receita", style = MaterialTheme.typography.labelMedium) },
                     modifier = Modifier
                         .weight(1f)
                         .testTag("chip_type_receita"),
+                    shape = RoundedCornerShape(12.dp),
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer
+                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    ),
+                    border = BorderStroke(
+                        1.dp,
+                        if (transactionType == TransactionType.RECEITA) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
                     )
                 )
             }
@@ -200,16 +241,72 @@ fun AddTransactionSheet(
 
             if (transactionType == TransactionType.RECEITA) {
                 // ============================================
-                // ULTRA-SIMPLIFIED RECEITA: SALÁRIO + RENDA EXTRA
+                // CADASTRO DE RECEITAS (Requisito 2):
+                // Múltiplas receitas livres com Descrição, Valor e Data
                 // ============================================
-                val parsedSalary = CurrencyUtils.parseAmount(salaryText)
-                val parsedExtra = CurrencyUtils.parseAmount(extraIncomeText)
-                val totalRevenue = parsedSalary + parsedExtra
+                val revenueSuggestions = listOf(
+                    "Salário",
+                    "Hora extra",
+                    "Comissão",
+                    "Venda",
+                    "Aluguel recebido",
+                    "Cashback",
+                    "Restituição",
+                    "Décimo terceiro",
+                    "Presente",
+                    "Outros"
+                )
 
                 OutlinedTextField(
-                    value = salaryText,
-                    onValueChange = { salaryText = it },
-                    label = { Text("Salário (R$)") },
+                    value = revenueDescription,
+                    onValueChange = {
+                        revenueDescription = it
+                        revenueHasError = false
+                    },
+                    label = { Text("Descrição da Receita *") },
+                    placeholder = { Text("Ex: Salário, Venda, Restituição...") },
+                    leadingIcon = {
+                        Icon(imageVector = Icons.Default.Description, contentDescription = null)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("input_revenue_description"),
+                    isError = revenueHasError && revenueDescription.isBlank(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp)
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Sugestões rápidas
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    revenueSuggestions.forEach { suggestion ->
+                        val isSelected = revenueDescription.equals(suggestion, ignoreCase = true)
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = {
+                                revenueDescription = suggestion
+                                revenueHasError = false
+                            },
+                            label = { Text(suggestion, fontSize = 11.sp) }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = revenueAmountText,
+                    onValueChange = {
+                        revenueAmountText = it
+                        revenueHasError = false
+                    },
+                    label = { Text("Valor da Receita (R$) *") },
                     prefix = { Text("R$ ") },
                     placeholder = { Text("0,00") },
                     leadingIcon = {
@@ -218,82 +315,102 @@ fun AddTransactionSheet(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .testTag("input_salary"),
+                        .testTag("input_revenue_amount"),
+                    isError = revenueHasError && CurrencyUtils.parseAmount(revenueAmountText) <= 0.0,
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp)
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                OutlinedTextField(
-                    value = extraIncomeText,
-                    onValueChange = { extraIncomeText = it },
-                    label = { Text("Renda Extra (R$)") },
-                    prefix = { Text("R$ ") },
-                    placeholder = { Text("0,00") },
-                    leadingIcon = {
-                        Icon(imageVector = Icons.Default.TrendingUp, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
-                    },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                // Data da Receita
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .testTag("input_extra_income"),
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp)
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
-                    )
+                        .clip(RoundedCornerShape(12.dp))
                 ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Text(
-                            text = "RECEITA DO MÊS = SALÁRIO + RENDA EXTRA",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = CurrencyUtils.formatCurrency(totalRevenue),
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Black,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
+                    OutlinedTextField(
+                        value = CurrencyUtils.formatToDisplayDate(revenueDateIso),
+                        onValueChange = { },
+                        readOnly = true,
+                        label = { Text("Data do Recebimento") },
+                        supportingText = { Text("Toque para alterar a data") },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.CalendarToday,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        },
+                        trailingIcon = {
+                            IconButton(onClick = { showDatePicker(isForRevenue = true) }) {
+                                Icon(
+                                    imageVector = Icons.Default.CalendarMonth,
+                                    contentDescription = "Abrir calendário",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("input_revenue_date"),
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { showDatePicker(isForRevenue = true) }
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
 
                 Button(
                     onClick = {
-                        onSaveMonthlyRevenue(parsedSalary, parsedExtra)
-                        onAddRevenue("Salário", parsedSalary, "${selectedYearMonth}-01")
+                        val amount = CurrencyUtils.parseAmount(revenueAmountText)
+                        val isDescBlank = revenueDescription.isBlank()
+                        val isAmountInvalid = amount <= 0.0
+
+                        if (isDescBlank || isAmountInvalid) {
+                            revenueHasError = true
+                            Toast.makeText(context, "Preencha a descrição e um valor válido.", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+
+                        onAddRevenue(
+                            revenueDescription.trim(),
+                            amount,
+                            revenueDateIso
+                        )
                         onDismiss()
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(50.dp)
+                        .height(48.dp)
                         .testTag("btn_confirm_save_revenue"),
-                    shape = RoundedCornerShape(14.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
                 ) {
-                    Text("SALVAR RECEITA", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text("SALVAR RECEITA", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
             } else {
                 // ============================================
-                // ULTRA-SIMPLIFIED DESPESA (Regra 1):
+                // CADASTRO DE DESPESAS (Requisitos 1, 3, 6):
                 // 1. Descrição
-                // 2. Valor
+                // 2. Valor da parcela
                 // 3. Data de vencimento
-                // 4. Status (Paga ou A Pagar)
-                // 5. Opção de recorrência
+                // 4. Categoria
+                // 5. Status inicial
+                // 6. Recorrência: Única | Mensal | Parcelado (com número livre de parcelas)
                 // ============================================
 
                 // 1. Descrição
@@ -303,7 +420,7 @@ fun AddTransactionSheet(
                         description = it
                         hasError = false
                     },
-                    label = { Text("Descrição (ex: Aluguel, Luz)") },
+                    label = { Text("Descrição (ex: Aluguel, Netflix, Televisão)") },
                     leadingIcon = {
                         Icon(imageVector = Icons.Default.Description, contentDescription = null)
                     },
@@ -317,14 +434,15 @@ fun AddTransactionSheet(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // 2. Valor
+                // 2. Valor (Valor da despesa ou valor da parcela)
+                val isParcelado = recurrenceType == RecurrenceType.PARCELADO
                 OutlinedTextField(
                     value = amountText,
                     onValueChange = {
                         amountText = it
                         hasError = false
                     },
-                    label = { Text("Valor (R$)") },
+                    label = { Text(if (isParcelado) "Valor da Parcela (R$)" else "Valor (R$)") },
                     prefix = { Text("R$ ") },
                     leadingIcon = {
                         Icon(imageVector = Icons.Default.CreditCard, contentDescription = null)
@@ -340,7 +458,7 @@ fun AddTransactionSheet(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // 3. Data de vencimento com pequeno calendário
+                // 3. Data de vencimento
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -350,9 +468,9 @@ fun AddTransactionSheet(
                         value = CurrencyUtils.formatToDisplayDate(dateIso),
                         onValueChange = { },
                         readOnly = true,
-                        label = { Text("Data de Vencimento") },
+                        label = { Text("Data do 1º Vencimento") },
                         supportingText = {
-                            Text("Toque para escolher o dia no calendário")
+                            Text("Toque para escolher a data no calendário")
                         },
                         leadingIcon = {
                             Icon(
@@ -362,7 +480,7 @@ fun AddTransactionSheet(
                             )
                         },
                         trailingIcon = {
-                            IconButton(onClick = { showDatePicker() }) {
+                            IconButton(onClick = { showDatePicker(isForRevenue = false) }) {
                                 Icon(
                                     imageVector = Icons.Default.CalendarMonth,
                                     contentDescription = "Abrir calendário",
@@ -377,12 +495,11 @@ fun AddTransactionSheet(
                         shape = RoundedCornerShape(12.dp)
                     )
 
-                    // Overlay invisível que captura o clique em qualquer parte do campo para abrir o calendário
                     Box(
                         modifier = Modifier
                             .matchParentSize()
                             .clip(RoundedCornerShape(12.dp))
-                            .clickable { showDatePicker() }
+                            .clickable { showDatePicker(isForRevenue = false) }
                     )
                 }
 
@@ -421,19 +538,21 @@ fun AddTransactionSheet(
                 val defaultCategories = listOf(
                     "Alimentação",
                     "Água",
+                    "Combustível",
                     "Compras",
                     "Empréstimo",
                     "Energia",
                     "Imposto",
                     "Internet",
                     "Lazer",
+                    "Mercado",
                     "Moradia",
                     "Outros",
                     "Saúde",
                     "Transporte"
                 )
                 val availableCategories = remember(categories) {
-                    val collator = java.text.Collator.getInstance(java.util.Locale("pt", "BR")).apply {
+                    val collator = java.text.Collator.getInstance(Locale("pt", "BR")).apply {
                         strength = java.text.Collator.PRIMARY
                     }
                     val fromDb = categories.map { it.name.trim() }.filter { it.isNotBlank() }
@@ -447,7 +566,6 @@ fun AddTransactionSheet(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     availableCategories.forEach { cat ->
-                        val isLazer = cat.equals("Lazer", ignoreCase = true)
                         val isSelected = selectedCategory != null && selectedCategory.equals(cat, ignoreCase = true)
                         FilterChip(
                             selected = isSelected,
@@ -455,28 +573,7 @@ fun AddTransactionSheet(
                                 selectedCategory = cat
                                 categoryError = false
                             },
-                            label = {
-                                Text(
-                                    text = cat,
-                                    fontSize = 12.sp,
-                                    fontWeight = if (isLazer) FontWeight.SemiBold else FontWeight.Normal
-                                )
-                            },
-                            colors = if (isLazer) {
-                                FilterChipDefaults.filterChipColors(
-                                    containerColor = LeisurePurple.copy(alpha = 0.08f),
-                                    labelColor = LeisurePurple,
-                                    selectedContainerColor = LeisurePurple.copy(alpha = 0.22f),
-                                    selectedLabelColor = LeisurePurple
-                                )
-                            } else {
-                                FilterChipDefaults.filterChipColors()
-                            },
-                            border = if (isLazer) {
-                                BorderStroke(1.dp, LeisurePurple.copy(alpha = if (isSelected) 0.8f else 0.4f))
-                            } else {
-                                FilterChipDefaults.filterChipBorder(enabled = true, selected = isSelected)
-                            }
+                            label = { Text(text = cat, fontSize = 12.sp) }
                         )
                     }
                 }
@@ -492,57 +589,9 @@ fun AddTransactionSheet(
                     )
                 }
 
-                if (selectedCategory?.equals("Lazer", ignoreCase = true) == true && leisureLimit > 0) {
-                    val currentTypedAmount = CurrencyUtils.parseAmount(amountText)
-                    val projectedSpent = leisureSpent + currentTypedAmount
-                    val isExceeding = projectedSpent > leisureLimit
-                    val diff = if (isExceeding) projectedSpent - leisureLimit else 0.0
+                Spacer(modifier = Modifier.height(14.dp))
 
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = if (isExceeding) OverdueRed.copy(alpha = 0.1f) else LeisurePurple.copy(alpha = 0.08f),
-                        border = BorderStroke(1.dp, if (isExceeding) OverdueRed.copy(alpha = 0.4f) else LeisurePurple.copy(alpha = 0.25f)),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.padding(10.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = if (isExceeding) Icons.Default.Warning else Icons.Default.Info,
-                                    contentDescription = null,
-                                    tint = if (isExceeding) OverdueRed else LeisurePurple,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = if (isExceeding) "Aviso: Limite de Lazer" else "Acompanhamento de Lazer",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isExceeding) OverdueRed else LeisurePurple
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(3.dp))
-                            if (isExceeding) {
-                                Text(
-                                    text = "Você ultrapassou o limite recomendado para lazer deste mês em ${CurrencyUtils.formatCurrency(diff)}.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = OverdueRed
-                                )
-                            } else {
-                                Text(
-                                    text = "Limite recomendado: ${CurrencyUtils.formatCurrency(leisureLimit)} • Já gasto: ${CurrencyUtils.formatCurrency(leisureSpent)} • Restante: ${CurrencyUtils.formatCurrency(max(0.0, leisureLimit - leisureSpent))}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // 5. Status (Paga ou A Pagar)
+                // 5. Status Inicial (Paga ou A Pagar)
                 Text(
                     text = "Status Inicial",
                     style = MaterialTheme.typography.labelMedium,
@@ -582,11 +631,11 @@ fun AddTransactionSheet(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-                // 6. Opção de recorrência / parcelamento
+                // 6. RECORRÊNCIA E PARCELAMENTO (Requisito 6)
                 Text(
-                    text = "Repetir ou Parcelar",
+                    text = "Tipo de Lançamento / Recorrência",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -594,41 +643,145 @@ fun AddTransactionSheet(
                 Spacer(modifier = Modifier.height(6.dp))
 
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     FilterChip(
-                        selected = recurrenceOption == 1,
-                        onClick = { recurrenceOption = 1 },
-                        label = { Text("À vista (este mês)") }
+                        selected = recurrenceType == RecurrenceType.UNICA,
+                        onClick = { recurrenceType = RecurrenceType.UNICA },
+                        label = { Text("À vista", fontWeight = FontWeight.SemiBold) },
+                        modifier = Modifier.weight(1f)
                     )
+
                     FilterChip(
-                        selected = recurrenceOption == 12,
-                        onClick = { recurrenceOption = 12 },
-                        label = { Text("Mensal fixa (12 meses)") }
+                        selected = recurrenceType == RecurrenceType.MENSAL,
+                        onClick = { recurrenceType = RecurrenceType.MENSAL },
+                        label = { Text("Mensal", fontWeight = FontWeight.SemiBold) },
+                        modifier = Modifier.weight(1f)
                     )
+
                     FilterChip(
-                        selected = recurrenceOption == 2,
-                        onClick = { recurrenceOption = 2 },
-                        label = { Text("2x") }
+                        selected = recurrenceType == RecurrenceType.PARCELADO,
+                        onClick = { recurrenceType = RecurrenceType.PARCELADO },
+                        label = { Text("Parcelado", fontWeight = FontWeight.SemiBold) },
+                        modifier = Modifier.weight(1f)
                     )
-                    FilterChip(
-                        selected = recurrenceOption == 3,
-                        onClick = { recurrenceOption = 3 },
-                        label = { Text("3x") }
-                    )
-                    FilterChip(
-                        selected = recurrenceOption == 6,
-                        onClick = { recurrenceOption = 6 },
-                        label = { Text("6x") }
-                    )
-                    FilterChip(
-                        selected = recurrenceOption == 10,
-                        onClick = { recurrenceOption = 10 },
-                        label = { Text("10x") }
-                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                when (recurrenceType) {
+                    RecurrenceType.UNICA -> {
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "Lançamento único com vencimento apenas neste mês.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(10.dp)
+                            )
+                        }
+                    }
+
+                    RecurrenceType.MENSAL -> {
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Autorenew,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column {
+                                    Text(
+                                        text = "Recorrência Mensal (sem prazo definido)",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Text(
+                                        text = "Ex: Netflix, Aluguel, Internet. O sistema cria os lançamentos mensais contínuos até você encerrar ou excluir.",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    RecurrenceType.PARCELADO -> {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Text(
+                                    text = "Compra Parcelada / Financiada",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Informe livremente a quantidade total de parcelas (aceita qualquer número inteiro > 0).",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+
+                                Spacer(modifier = Modifier.height(10.dp))
+
+                                OutlinedTextField(
+                                    value = installmentsText,
+                                    onValueChange = {
+                                        // Aceita apenas números inteiros positivos
+                                        val filtered = it.filter { ch -> ch.isDigit() }
+                                        installmentsText = filtered
+                                    },
+                                    label = { Text("Quantidade de Parcelas") },
+                                    placeholder = { Text("Ex: 2, 4, 5, 7, 10, 15, 18, 24, 36...") },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    singleLine = true,
+                                    shape = RoundedCornerShape(10.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .testTag("input_installments_count")
+                                )
+
+                                val parsedCount = installmentsText.toIntOrNull() ?: 1
+                                val unitAmount = CurrencyUtils.parseAmount(amountText)
+                                val totalCost = unitAmount * parsedCount
+
+                                if (parsedCount > 1 && unitAmount > 0) {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = "Total: $parsedCount parcelas de ${CurrencyUtils.formatCurrency(unitAmount)} = ${CurrencyUtils.formatCurrency(totalCost)}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Text(
+                                        text = "Serão criadas $parsedCount parcelas mensais futuras automáticas, preservando histórico e controle individual.",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
@@ -652,33 +805,37 @@ fun AddTransactionSheet(
                         }
 
                         val categoryChosen = selectedCategory!!
+                        val isMonthly = recurrenceType == RecurrenceType.MENSAL
+                        val count = if (recurrenceType == RecurrenceType.PARCELADO) {
+                            max(1, installmentsText.toIntOrNull() ?: 1)
+                        } else {
+                            1
+                        }
+
                         onAddExpense(
-                            description,
+                            description.trim(),
                             amount,
                             dateIso,
                             isExpensePaid,
-                            recurrenceOption,
-                            categoryChosen
+                            count,
+                            categoryChosen,
+                            isMonthly
                         )
-
-                        if (categoryChosen.equals("Lazer", ignoreCase = true) && leisureLimit > 0 && (leisureSpent + amount) > leisureLimit) {
-                            val overAmount = (leisureSpent + amount) - leisureLimit
-                            Toast.makeText(
-                                context,
-                                "Você ultrapassou o limite recomendado para lazer deste mês em ${CurrencyUtils.formatCurrency(overAmount)}.",
-                                Toast.LENGTH_LONG
-                            ).show()
-                        }
 
                         onDismiss()
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(50.dp)
+                        .height(48.dp)
                         .testTag("btn_confirm_add_transaction"),
-                    shape = RoundedCornerShape(14.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
                 ) {
-                    Text("SALVAR DESPESA", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text("SALVAR DESPESA", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
