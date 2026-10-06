@@ -49,4 +49,25 @@ class ExampleRobolectricTest {
         val installmentValue = totalPurchase / installmentsCount
         assertEquals(120.0, installmentValue, 0.001)
     }
+
+    @Test
+    fun `test expense category change updates category totals`() {
+        data class TestExpense(val id: Long, val category: String, val amount: Double)
+        var expenses = listOf(
+            TestExpense(1, "Alimentação", 200.0),
+            TestExpense(2, "Lazer", 150.0)
+        )
+        // Grouping before edit
+        var totals = expenses.groupBy { it.category }.mapValues { (_, list) -> list.sumOf { it.amount } }
+        assertEquals(200.0, totals["Alimentação"] ?: 0.0, 0.001)
+        assertEquals(150.0, totals["Lazer"] ?: 0.0, 0.001)
+
+        // User edits expense 1 from "Alimentação" to "Combustível"
+        expenses = expenses.map { if (it.id == 1L) it.copy(category = "Combustível") else it }
+        totals = expenses.groupBy { it.category }.mapValues { (_, list) -> list.sumOf { it.amount } }
+
+        assertEquals(0.0, totals["Alimentação"] ?: 0.0, 0.001)
+        assertEquals(200.0, totals["Combustível"] ?: 0.0, 0.001)
+        assertEquals(150.0, totals["Lazer"] ?: 0.0, 0.001)
+    }
 }

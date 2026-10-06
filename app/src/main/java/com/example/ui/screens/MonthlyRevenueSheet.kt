@@ -6,12 +6,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -19,7 +18,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.data.model.Revenue
 import com.example.util.CurrencyUtils
-import java.time.LocalDate
 import java.time.YearMonth
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -28,12 +26,9 @@ fun MonthlyRevenueSheet(
     selectedYearMonth: YearMonth,
     revenues: List<Revenue>,
     onDismiss: () -> Unit,
-    onAddRevenue: (description: String, amount: Double, date: LocalDate) -> Unit,
     onEditRevenue: (Revenue) -> Unit,
     onDeleteRevenue: (Revenue) -> Unit
 ) {
-    var showAddDialog by remember { mutableStateOf(false) }
-
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState()
@@ -67,17 +62,6 @@ fun MonthlyRevenueSheet(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
             )
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            Button(
-                onClick = { showAddDialog = true },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = null)
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("Adicionar Nova Receita")
-            }
 
             Spacer(modifier = Modifier.height(14.dp))
 
@@ -162,48 +146,5 @@ fun MonthlyRevenueSheet(
 
             Spacer(modifier = Modifier.height(24.dp))
         }
-    }
-
-    if (showAddDialog) {
-        var desc by remember { mutableStateOf("") }
-        var amountText by remember { mutableStateOf("") }
-        AlertDialog(
-            onDismissRequest = { showAddDialog = false },
-            title = { Text("Nova Receita") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = desc,
-                        onValueChange = { desc = it },
-                        label = { Text("Descrição (ex: Salário)") },
-                        singleLine = true
-                    )
-                    OutlinedTextField(
-                        value = amountText,
-                        onValueChange = { amountText = it.replace(",", ".") },
-                        label = { Text("Valor (R$)") },
-                        singleLine = true
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val amount = amountText.toDoubleOrNull() ?: 0.0
-                        if (desc.isNotBlank() && amount > 0.0) {
-                            onAddRevenue(desc.trim(), amount, LocalDate.now())
-                            showAddDialog = false
-                        }
-                    }
-                ) {
-                    Text("Salvar")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAddDialog = false }) {
-                    Text("Cancelar")
-                }
-            }
-        )
     }
 }

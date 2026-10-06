@@ -517,27 +517,64 @@ fun ExpenseDetailsSheet(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            Row(
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Button(
                     onClick = onTogglePaid,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .testTag("btn_details_toggle_paid"),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text(if (expense.isPaid) "Desmarcar" else "Marcar como Paga")
+                    Icon(
+                        imageVector = if (expense.isPaid) Icons.Default.Undo else Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = if (expense.isPaid) "Desmarcar pagamento" else "Marcar como paga",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        softWrap = false
+                    )
                 }
-                OutlinedButton(
-                    onClick = onEdit,
-                    modifier = Modifier.weight(1f)
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Text("Editar")
-                }
-                IconButton(
-                    onClick = onDelete,
-                    colors = IconButtonDefaults.iconButtonColors(contentColor = OverdueRed)
-                ) {
-                    Icon(imageVector = Icons.Default.Delete, contentDescription = "Excluir")
+                    OutlinedButton(
+                        onClick = onEdit,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp)
+                            .testTag("btn_details_edit"),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Editar", maxLines = 1, softWrap = false)
+                    }
+
+                    OutlinedButton(
+                        onClick = onDelete,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp)
+                            .testTag("btn_details_delete"),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = OverdueRed),
+                        border = BorderStroke(1.dp, OverdueRed.copy(alpha = 0.5f)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Excluir", maxLines = 1, softWrap = false)
+                    }
                 }
             }
 

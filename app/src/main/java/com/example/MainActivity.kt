@@ -190,9 +190,6 @@ fun MainApp(viewModel: FinanceViewModel) {
             selectedYearMonth = selectedYearMonth,
             revenues = currentRevenues,
             onDismiss = { isRevenueSheetVisible = false },
-            onAddRevenue = { desc, amount, date ->
-                viewModel.addRevenue(desc, amount, date)
-            },
             onEditRevenue = { editingRevenue = it },
             onDeleteRevenue = { viewModel.deleteRevenue(it) }
         )

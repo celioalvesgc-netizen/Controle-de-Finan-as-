@@ -77,10 +77,10 @@ fun HomeScreen(
                 if (revenuesCount > 1) {
                     "$revenuesCount fontes de receita • Toque para ver"
                 } else {
-                    "Toque para ver ou gerenciar receitas"
+                    "1 fonte de receita • Toque para ver"
                 }
             } else {
-                "Toque para adicionar receitas do mês"
+                "Nenhuma receita registrada neste mês"
             }
 
             FinancialMetricCard(
