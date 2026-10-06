@@ -1,42 +1,49 @@
 package com.example.data.dao
 
-import androidx.room.Dao
-import androidx.room.Delete
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
-import androidx.room.Query
-import androidx.room.Update
-import com.example.data.model.AppSettings
+import androidx.room.*
 import com.example.data.model.Category
 import com.example.data.model.Expense
-import com.example.data.model.MonthlyRevenue
+import com.example.data.model.FinanceSettings
+import com.example.data.model.MonthlySettings
 import com.example.data.model.Revenue
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface MonthlyRevenueDao {
-    @Query("SELECT * FROM monthly_revenues WHERE month = :month LIMIT 1")
-    fun getRevenueForMonth(month: String): Flow<MonthlyRevenue?>
+interface ExpenseDao {
+    @Query("SELECT * FROM expenses WHERE yearMonth = :yearMonth ORDER BY dueDate ASC")
+    fun getExpensesForMonth(yearMonth: String): Flow<List<Expense>>
 
-    @Query("SELECT * FROM monthly_revenues WHERE month = :month LIMIT 1")
-    suspend fun getRevenueForMonthDirect(month: String): MonthlyRevenue?
+    @Query("SELECT * FROM expenses ORDER BY dueDate ASC")
+    fun getAllExpenses(): Flow<List<Expense>>
 
-    @Query("SELECT * FROM monthly_revenues")
-    fun getAllMonthlyRevenues(): Flow<List<MonthlyRevenue>>
+    @Query("SELECT * FROM expenses WHERE recurringGroupId = :groupId ORDER BY dueDate ASC")
+    fun getExpensesByRecurringGroup(groupId: String): Flow<List<Expense>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun saveMonthlyRevenue(revenue: MonthlyRevenue)
+    suspend fun insertExpense(expense: Expense): Long
 
-    @Query("DELETE FROM monthly_revenues WHERE month = :month")
-    suspend fun deleteRevenueForMonth(month: String)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertExpenses(expenses: List<Expense>): List<Long>
+
+    @Update
+    suspend fun updateExpense(expense: Expense)
+
+    @Delete
+    suspend fun deleteExpense(expense: Expense)
+
+    @Query("DELETE FROM expenses WHERE recurringGroupId = :groupId AND isPaid = 0")
+    suspend fun deletePendingRecurringExpenses(groupId: String)
+
+    @Query("SELECT * FROM expenses WHERE isPaid = 0")
+    suspend fun getAllPendingExpenses(): List<Expense>
 }
 
 @Dao
 interface RevenueDao {
-    @Query("SELECT * FROM revenues WHERE date LIKE :monthPrefix || '%' ORDER BY date ASC")
-    fun getRevenuesByMonth(monthPrefix: String): Flow<List<Revenue>>
+    @Query("SELECT * FROM revenues WHERE yearMonth = :yearMonth ORDER BY date ASC")
+    fun getRevenuesForMonth(yearMonth: String): Flow<List<Revenue>>
 
-    @Query("SELECT * FROM revenues ORDER BY date DESC")
+    @Query("SELECT * FROM revenues ORDER BY date ASC")
     fun getAllRevenues(): Flow<List<Revenue>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -50,46 +57,9 @@ interface RevenueDao {
 }
 
 @Dao
-interface ExpenseDao {
-    @Query("SELECT * FROM expenses WHERE dueDate LIKE :monthPrefix || '%' ORDER BY dueDate ASC")
-    fun getExpensesByMonth(monthPrefix: String): Flow<List<Expense>>
-
-    @Query("SELECT * FROM expenses ORDER BY dueDate DESC")
-    fun getAllExpenses(): Flow<List<Expense>>
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertExpense(expense: Expense): Long
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertExpenses(expenses: List<Expense>)
-
-    @Update
-    suspend fun updateExpense(expense: Expense)
-
-    @Delete
-    suspend fun deleteExpense(expense: Expense)
-
-    // Stop recurring expenses in the future without touching past or paid items
-    @Query("DELETE FROM expenses WHERE recurringGroupId = :groupId AND dueDate > :afterDate AND isPaid = 0")
-    suspend fun cancelFutureRecurringExpenses(groupId: String, afterDate: String)
-
-    @Query("SELECT * FROM expenses WHERE isPaid = 0")
-    suspend fun getUnpaidExpensesDirect(): List<Expense>
-}
-
-@Dao
 interface CategoryDao {
-    @Query("SELECT * FROM categories WHERE id IN (SELECT MIN(id) FROM categories GROUP BY LOWER(TRIM(name))) ORDER BY name COLLATE NOCASE ASC")
+    @Query("SELECT * FROM categories ORDER BY id ASC")
     fun getAllCategories(): Flow<List<Category>>
-
-    @Query("SELECT * FROM categories WHERE LOWER(TRIM(name)) = LOWER(TRIM(:name)) LIMIT 1")
-    suspend fun getCategoryByName(name: String): Category?
-
-    @Query("DELETE FROM categories WHERE id NOT IN (SELECT MIN(id) FROM categories GROUP BY LOWER(TRIM(name)))")
-    suspend fun deleteDuplicateCategories()
-
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertCategories(categories: List<Category>)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertCategory(category: Category): Long
@@ -99,13 +69,19 @@ interface CategoryDao {
 }
 
 @Dao
-interface SettingsDao {
-    @Query("SELECT * FROM app_settings WHERE id = 1")
-    fun getSettings(): Flow<AppSettings?>
-
-    @Query("SELECT * FROM app_settings WHERE id = 1")
-    suspend fun getSettingsDirect(): AppSettings?
+interface MonthlySettingsDao {
+    @Query("SELECT * FROM monthly_settings WHERE yearMonth = :yearMonth")
+    fun getSettingsForMonth(yearMonth: String): Flow<MonthlySettings?>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun saveSettings(settings: AppSettings)
+    suspend fun insertOrUpdate(settings: MonthlySettings)
+}
+
+@Dao
+interface FinanceSettingsDao {
+    @Query("SELECT * FROM finance_settings WHERE id = 1")
+    fun getSettings(): Flow<FinanceSettings?>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertOrUpdate(settings: FinanceSettings)
 }

@@ -93,6 +93,3 @@ val GreenPrimaryDark = Color(0xFF52B788)
 val GreenOnPrimaryDark = Color(0xFF003822)
 val GreenPrimaryContainerDark = Color(0xFF1B4332)
 val GreenOnPrimaryContainerDark = Color(0xFFD8F3DC)
-
-
-

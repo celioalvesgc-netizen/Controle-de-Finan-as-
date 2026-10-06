@@ -3,125 +3,57 @@ package com.example.ui.screens
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
-import androidx.compose.material.icons.filled.Category
-import androidx.compose.material.icons.filled.CreditCard
-import androidx.compose.material.icons.filled.Savings
-import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.filled.SportsEsports
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.data.model.Expense
+import com.example.data.model.FinanceSummary
 import com.example.ui.components.FinancialMetricCard
-import com.example.ui.components.MonthSelector
-import com.example.ui.theme.EmergencyTeal
-import com.example.ui.theme.ExpenseCardDarkAmount
-import com.example.ui.theme.ExpenseCardDarkBg
-import com.example.ui.theme.ExpenseCardDarkBorder
-import com.example.ui.theme.ExpenseCardDarkIcon
-import com.example.ui.theme.ExpenseCardDarkIconBg
-import com.example.ui.theme.ExpenseCardDarkTitle
-import com.example.ui.theme.ExpenseCardLightAmount
-import com.example.ui.theme.ExpenseCardLightBg
-import com.example.ui.theme.ExpenseCardLightBorder
-import com.example.ui.theme.ExpenseCardLightIcon
-import com.example.ui.theme.ExpenseCardLightIconBg
-import com.example.ui.theme.ExpenseCardLightTitle
-import com.example.ui.theme.InvestmentBlue
-import com.example.ui.theme.LeisurePurple
-import com.example.ui.theme.OverdueRed
-import com.example.ui.theme.PaidGreen
-import com.example.ui.theme.PendingYellow
-import com.example.ui.theme.RevenueCardDarkAmount
-import com.example.ui.theme.RevenueCardDarkBg
-import com.example.ui.theme.RevenueCardDarkBorder
-import com.example.ui.theme.RevenueCardDarkIcon
-import com.example.ui.theme.RevenueCardDarkIconBg
-import com.example.ui.theme.RevenueCardDarkSubtitle
-import com.example.ui.theme.RevenueCardDarkTitle
-import com.example.ui.theme.RevenueCardLightAmount
-import com.example.ui.theme.RevenueCardLightBg
-import com.example.ui.theme.RevenueCardLightBorder
-import com.example.ui.theme.RevenueCardLightIcon
-import com.example.ui.theme.RevenueCardLightIconBg
-import com.example.ui.theme.RevenueCardLightSubtitle
-import com.example.ui.theme.RevenueCardLightTitle
-import com.example.ui.viewmodel.FinanceSummary
+import com.example.ui.components.MonthSelectorCard
+import com.example.ui.theme.*
 import com.example.util.CurrencyUtils
 import java.time.YearMonth
 import kotlin.math.roundToInt
 
 @Composable
 fun HomeScreen(
-    summary: FinanceSummary,
-    expenses: List<Expense> = emptyList(),
     selectedYearMonth: YearMonth,
+    summary: FinanceSummary,
+    revenuesCount: Int,
+    categoryTotals: Map<String, Double>,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
     onResetCurrentMonth: () -> Unit,
-    onNavigateToTransactions: () -> Unit,
-    onEditRevenue: () -> Unit = {},
-    onEditPercentages: () -> Unit = {},
-    onToggleSumWithOtherMonths: (Boolean) -> Unit = {},
+    onEditRevenue: () -> Unit,
+    onEditPercentages: () -> Unit,
+    onToggleSumWithOtherMonths: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Gastos por Categoria (Regra 5)
-    val categoryTotals = remember(expenses) {
-        if (expenses.isEmpty()) emptyList()
-        else {
-            expenses
-                .groupBy { if (it.category.isNotBlank()) it.category else "Outros" }
-                .mapValues { (_, list) -> list.sumOf { it.amount } }
-                .toList()
-                .sortedByDescending { it.second }
-        }
-    }
-
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .testTag("home_screen_list"),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 100.dp),
+            .testTag("home_screen_content"),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 96.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // Navegação de Mês
+        // 0. Seletor de Mês
         item {
-            MonthSelector(
+            MonthSelectorCard(
                 selectedYearMonth = selectedYearMonth,
                 onPreviousMonth = onPreviousMonth,
                 onNextMonth = onNextMonth,
@@ -129,7 +61,7 @@ fun HomeScreen(
             )
         }
 
-        // 1. RECEITA DO MÊS (Paleta Azul, múltiplas receitas, sem Salário/Renda Extra fixos)
+        // 1. RECEITA DO MÊS (Paleta Azul Tonal)
         item {
             val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
 
@@ -142,10 +74,8 @@ fun HomeScreen(
             val revSubtitle = if (isDark) RevenueCardDarkSubtitle else RevenueCardLightSubtitle
 
             val revenueSubtitle = if (summary.totalRevenue > 0) {
-                if (summary.revenuesCount > 1) {
-                    "${summary.revenuesCount} receitas cadastradas • Toque para gerenciar"
-                } else if (summary.revenuesCount == 1) {
-                    "1 receita cadastrada • Toque para gerenciar"
+                if (revenuesCount > 1) {
+                    "$revenuesCount fontes de receita • Toque para ver"
                 } else {
                     "Toque para ver ou gerenciar receitas"
                 }
@@ -172,7 +102,7 @@ fun HomeScreen(
             )
         }
 
-        // 2. DESPESAS DO MÊS (Paleta Vermelha, Percentual da Receita, com PAGO, A PAGAR, VENCIDO)
+        // 2. DESPESAS DO MÊS (Paleta Vermelha com PAGO, A PAGAR, VENCIDO)
         item {
             val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
 
@@ -216,7 +146,7 @@ fun HomeScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Default.CreditCard,
+                                imageVector = Icons.Default.TrendingDown,
                                 contentDescription = null,
                                 tint = expIcon,
                                 modifier = Modifier.size(18.dp)
@@ -226,61 +156,40 @@ fun HomeScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = CurrencyUtils.formatCurrency(summary.totalExpenses),
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = expAmount
-                        )
+                    Text(
+                        text = CurrencyUtils.formatCurrency(summary.totalExpenses),
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = expAmount
+                    )
 
-                        if (expensePercentage != null) {
-                            Surface(
-                                shape = RoundedCornerShape(6.dp),
-                                color = if (isDark) Color(0xFF3D1619) else Color(0xFFFEE2E2),
-                                border = BorderStroke(1.dp, if (isDark) Color(0xFF5A1A1E) else Color(0xFFFECACA))
-                            ) {
-                                Text(
-                                    text = "$expensePercentage% da receita",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = if (isDark) Color(0xFFFCA5A5) else Color(0xFF991B1B),
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                                )
-                            }
-                        }
+                    if (expensePercentage != null) {
+                        Spacer(modifier = Modifier.height(3.dp))
+                        Text(
+                            text = "$expensePercentage% da receita total deste mês",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            color = if (expensePercentage > 100) OverdueRed else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(14.dp))
-                    HorizontalDivider(color = expBorder.copy(alpha = 0.6f))
+                    HorizontalDivider(color = expBorder)
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    // 3 colunas: PAGO | A PAGAR | VENCIDO
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        // PAGO
-                        Column(modifier = Modifier.weight(1f)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(6.dp)
-                                        .background(PaidGreen, CircleShape)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "PAGO",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = PaidGreen
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(4.dp))
+                        // Pagas
+                        Column {
+                            Text(
+                                text = "Pagas",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = PaidGreen,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = CurrencyUtils.formatCurrency(summary.totalPaid),
                                 style = MaterialTheme.typography.bodyMedium,
@@ -289,23 +198,15 @@ fun HomeScreen(
                             )
                         }
 
-                        // A PAGAR
-                        Column(modifier = Modifier.weight(1f)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(6.dp)
-                                        .background(PendingYellow, CircleShape)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "A PAGAR",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = PendingYellow
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(4.dp))
+                        // A Pagar
+                        Column {
+                            Text(
+                                text = "A Pagar",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = PendingYellow,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = CurrencyUtils.formatCurrency(summary.totalPending),
                                 style = MaterialTheme.typography.bodyMedium,
@@ -314,28 +215,20 @@ fun HomeScreen(
                             )
                         }
 
-                        // VENCIDO
-                        Column(modifier = Modifier.weight(1f)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(6.dp)
-                                        .background(OverdueRed, CircleShape)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "VENCIDO",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = OverdueRed
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(4.dp))
+                        // Vencidas
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                text = "Vencidas",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (summary.totalOverdue > 0) OverdueRed else MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = CurrencyUtils.formatCurrency(summary.totalOverdue),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = if (summary.totalOverdue > 0) OverdueRed else MaterialTheme.colorScheme.onSurface
+                                color = if (summary.totalOverdue > 0) OverdueRed else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -343,7 +236,7 @@ fun HomeScreen(
             }
         }
 
-        // 3. INVESTIMENTO (Percentual e valor destinados)
+        // 3. INVESTIMENTO
         item {
             FinancialMetricCard(
                 title = "Investimento",
@@ -358,7 +251,7 @@ fun HomeScreen(
             )
         }
 
-        // 4. LIMITE POR CATEGORIA (Flexível: o usuário pode escolher qualquer categoria para definir o teto percentual)
+        // 4. LIMITE POR CATEGORIA
         item {
             val catLimitName = summary.categoryLimitName.ifBlank { "Lazer" }
             val isOverLimit = summary.categoryLimitAmount > 0 && summary.categoryLimitSpent > summary.categoryLimitAmount
@@ -408,10 +301,7 @@ fun HomeScreen(
                         Box(
                             modifier = Modifier
                                 .size(34.dp)
-                                .background(
-                                    accentColor.copy(alpha = 0.12f),
-                                    CircleShape
-                                ),
+                                .background(accentColor.copy(alpha = 0.12f), CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -425,7 +315,6 @@ fun HomeScreen(
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    // Linha com Percentual Consumido em destaque
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -438,93 +327,57 @@ fun HomeScreen(
                         )
                         Surface(
                             shape = RoundedCornerShape(6.dp),
-                            color = accentColor.copy(alpha = 0.12f)
+                            color = if (isOverLimit) OverdueRedBg else MaterialTheme.colorScheme.surfaceVariant
                         ) {
                             Text(
-                                text = "$percentConsumed% consumido",
+                                text = "$percentConsumed%",
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = accentColor,
-                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
+                                color = if (isOverLimit) OverdueRedText else MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
-
+                    Spacer(modifier = Modifier.height(6.dp))
                     LinearProgressIndicator(
                         progress = { categoryRatio },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(6.dp)
-                            .clip(RoundedCornerShape(3.dp)),
-                        color = accentColor,
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                            .height(8.dp)
+                            .clip(RoundedCornerShape(4.dp)),
+                        color = if (isOverLimit) OverdueRed else LeisurePurple,
+                        trackColor = MaterialTheme.colorScheme.outlineVariant
                     )
 
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    // 3 Métricas: Limite | Utilizado | Restante
+                    Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Limite",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = CurrencyUtils.formatCurrency(summary.categoryLimitAmount),
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Utilizado",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = CurrencyUtils.formatCurrency(summary.categoryLimitSpent),
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isOverLimit) OverdueRed else MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Restante",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = CurrencyUtils.formatCurrency(summary.categoryLimitAvailable),
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = if (summary.categoryLimitAvailable > 0) PaidGreen else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        Text(
+                            text = "Gasto: ${CurrencyUtils.formatCurrency(summary.categoryLimitSpent)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = if (isOverLimit) {
+                                "Excedeu: +${CurrencyUtils.formatCurrency(overAmount)}"
+                            } else {
+                                "Resta: ${CurrencyUtils.formatCurrency(summary.categoryLimitAmount - summary.categoryLimitSpent)}"
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (isOverLimit) OverdueRed else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
 
-                    // Aviso quando ultrapassar o limite recomendado
                     if (isOverLimit) {
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
                         Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = OverdueRed.copy(alpha = 0.08f),
-                            border = BorderStroke(1.dp, OverdueRed.copy(alpha = 0.3f)),
+                            shape = RoundedCornerShape(8.dp),
+                            color = OverdueRedBg,
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Row(
@@ -551,7 +404,7 @@ fun HomeScreen(
             }
         }
 
-        // 5. SALDO DISPONÍVEL (Calculado mês a mês, podendo somar com o saldo de outros meses)
+        // 5. SALDO DISPONÍVEL (Com destaque aprimorado e quebra de linha organizada no botão "Somar outros meses")
         item {
             val isSumming = summary.isAccumulatingWithOtherMonths
             val displayedAmount = if (isSumming) summary.availableBalanceTotal else summary.availableBalanceMonth
@@ -612,15 +465,20 @@ fun HomeScreen(
                     )
 
                     Spacer(modifier = Modifier.height(14.dp))
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     Spacer(modifier = Modifier.height(14.dp))
 
+                    // Linha inferior com quebra de linha suave e botão interativo destacado
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(end = 12.dp)
+                        ) {
                             Text(
                                 text = "Deste mês: ${CurrencyUtils.formatCurrency(summary.availableBalanceMonth)}",
                                 style = MaterialTheme.typography.bodySmall,
@@ -635,29 +493,58 @@ fun HomeScreen(
                             )
                         }
 
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.clickable { onToggleSumWithOtherMonths(!isSumming) }
+                        // Botão interativo destacado com quebra de linha e superfície com borda e contraste elegante
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isSumming) {
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+                            },
+                            border = BorderStroke(
+                                1.dp,
+                                if (isSumming) {
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+                                } else {
+                                    MaterialTheme.colorScheme.outlineVariant
+                                }
+                            ),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable { onToggleSumWithOtherMonths(!isSumming) }
+                                .testTag("btn_container_somar_outros_meses")
                         ) {
-                            Text(
-                                text = "Somar outros meses",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                fontWeight = if (isSumming) FontWeight.Bold else FontWeight.Medium
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Switch(
-                                checked = isSumming,
-                                onCheckedChange = { onToggleSumWithOtherMonths(it) },
-                                modifier = Modifier.testTag("switch_somar_outros_meses")
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Text(
+                                    text = "Somar outros\nmeses",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = if (isSumming) {
+                                        MaterialTheme.colorScheme.onPrimaryContainer
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurface
+                                    },
+                                    fontWeight = if (isSumming) FontWeight.Bold else FontWeight.SemiBold,
+                                    lineHeight = 14.sp
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Switch(
+                                    checked = isSumming,
+                                    onCheckedChange = { onToggleSumWithOtherMonths(it) },
+                                    modifier = Modifier
+                                        .scale(0.85f)
+                                        .testTag("switch_somar_outros_meses")
+                                )
+                            }
                         }
                     }
                 }
             }
         }
 
-        // 6. GASTOS POR CATEGORIA (No final da página - compacto e simples - Regra 1)
+        // 6. GASTOS POR CATEGORIA
         if (categoryTotals.isNotEmpty()) {
             item {
                 Card(
@@ -692,66 +579,37 @@ fun HomeScreen(
 
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        val totalAmount = categoryTotals.sumOf { it.second }
-                        val categoryColors = listOf(
-                            Color(0xFF0A6847),
-                            InvestmentBlue,
-                            LeisurePurple,
-                            EmergencyTeal,
-                            Color(0xFFD97706),
-                            Color(0xFFEA580C),
-                            Color(0xFFE11D48),
-                            Color(0xFF6366F1)
-                        )
-
-                        categoryTotals.forEachIndexed { index, (category, amount) ->
-                            val percentage = if (totalAmount > 0) (amount / totalAmount).toFloat() else 0f
-                            val percentText = String.format("%.0f%%", percentage * 100)
-                            val barColor = categoryColors[index % categoryColors.size]
-
-                            Column(modifier = Modifier.padding(vertical = 3.dp)) {
+                        val total = categoryTotals.values.sum().coerceAtLeast(1.0)
+                        categoryTotals.entries.sortedByDescending { it.value }.forEach { entry ->
+                            val pct = ((entry.value / total) * 100).roundToInt()
+                            Column(modifier = Modifier.padding(vertical = 4.dp)) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
+                                    horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
                                     Text(
-                                        text = category,
+                                        text = entry.key,
                                         style = MaterialTheme.typography.bodySmall,
                                         fontWeight = FontWeight.Medium,
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(
-                                            text = CurrencyUtils.formatCurrency(amount),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text(
-                                            text = "($percentText)",
-                                            fontSize = 11.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
+                                    Text(
+                                        text = "${CurrencyUtils.formatCurrency(entry.value)} ($pct%)",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
                                 }
-
                                 Spacer(modifier = Modifier.height(4.dp))
-
                                 LinearProgressIndicator(
-                                    progress = { percentage },
+                                    progress = { (entry.value / total).toFloat().coerceIn(0f, 1f) },
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(4.dp)
                                         .clip(RoundedCornerShape(2.dp)),
-                                    color = barColor,
-                                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                                    color = MaterialTheme.colorScheme.primary,
+                                    trackColor = MaterialTheme.colorScheme.outlineVariant
                                 )
-                            }
-
-                            if (index < categoryTotals.size - 1) {
-                                Spacer(modifier = Modifier.height(6.dp))
                             }
                         }
                     }

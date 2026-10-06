@@ -1,8 +1,30 @@
-<?xml version="1.0" encoding="utf-8"?>
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item
-        android:width="66dp"
-        android:height="66dp"
-        android:drawable="@drawable/finance_bw_icon_1791215852215"
-        android:gravity="center" />
-</layer-list>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Geometric financial card outline -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M30,34 h48 a6,6 0 0,1 6,6 v28 a6,6 0 0,1 -6,6 h-48 a6,6 0 0,1 -6,-6 v-28 a6,6 0 0,1 6,-6 z" />
+    <!-- Magnetic stripe / chip element -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M24,44 h60 v6 h-60 z" />
+    <!-- Upward financial trend curve -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M32,64 L46,55 L58,61 L76,46" />
+    <!-- Upward arrow head -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M76,43 L69,44.5 L73,48.5 z" />
+</vector>

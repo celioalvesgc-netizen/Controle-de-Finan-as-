@@ -17,7 +17,7 @@ local.properties
 .env
 debug.keystore
 
-# Ensure release artifacts are tracked for direct download
+# Keep release artifacts for direct installation
 !/APK/**
 !/release/**
 !*.apk

@@ -1,7 +1,6 @@
 package com.example.ui.theme
 
 import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -59,8 +58,8 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun MyApplicationTheme(
-    darkTheme: Boolean = false, // Light Mode como padrão (Regra 4)
-    dynamicColor: Boolean = false, // Cores consistentes e limpas
+    darkTheme: Boolean = false,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {

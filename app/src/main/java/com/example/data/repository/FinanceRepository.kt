@@ -1,178 +1,104 @@
 package com.example.data.repository
 
-import com.example.data.dao.CategoryDao
-import com.example.data.dao.ExpenseDao
-import com.example.data.dao.MonthlyRevenueDao
-import com.example.data.dao.RevenueDao
-import com.example.data.dao.SettingsDao
-import com.example.data.model.AppSettings
-import com.example.data.model.Category
-import com.example.data.model.Expense
-import com.example.data.model.MonthlyRevenue
-import com.example.data.model.Revenue
-import com.example.util.CurrencyUtils
+import com.example.data.database.AppDatabase
+import com.example.data.model.*
 import kotlinx.coroutines.flow.Flow
+import java.time.LocalDate
+import java.time.YearMonth
 import java.util.UUID
 
-class FinanceRepository(
-    private val revenueDao: RevenueDao,
-    private val expenseDao: ExpenseDao,
-    private val categoryDao: CategoryDao,
-    private val settingsDao: SettingsDao,
-    private val monthlyRevenueDao: MonthlyRevenueDao
-) {
+class FinanceRepository(private val database: AppDatabase) {
+    private val expenseDao = database.expenseDao()
+    private val revenueDao = database.revenueDao()
+    private val categoryDao = database.categoryDao()
+    private val monthlySettingsDao = database.monthlySettingsDao()
+    private val financeSettingsDao = database.financeSettingsDao()
 
-    fun getMonthlyRevenue(month: String): Flow<MonthlyRevenue?> =
-        monthlyRevenueDao.getRevenueForMonth(month)
-
-    suspend fun getMonthlyRevenueDirect(month: String): MonthlyRevenue? =
-        monthlyRevenueDao.getRevenueForMonthDirect(month)
-
-    fun getAllMonthlyRevenues(): Flow<List<MonthlyRevenue>> =
-        monthlyRevenueDao.getAllMonthlyRevenues()
-
-    suspend fun saveMonthlyRevenue(month: String, salary: Double, extraIncome: Double) {
-        val existing = monthlyRevenueDao.getRevenueForMonthDirect(month)
-        monthlyRevenueDao.saveMonthlyRevenue(
-            MonthlyRevenue(
-                month = month,
-                salary = kotlin.math.max(0.0, salary),
-                extraIncome = kotlin.math.max(0.0, extraIncome),
-                investmentPercentage = existing?.investmentPercentage,
-                leisurePercentage = existing?.leisurePercentage
-            )
-        )
+    fun getExpensesForMonth(yearMonth: YearMonth): Flow<List<Expense>> {
+        val ymString = "%04d-%02d".format(yearMonth.year, yearMonth.monthValue)
+        return expenseDao.getExpensesForMonth(ymString)
     }
 
-    suspend fun saveMonthlyPercentages(
-        month: String,
-        investmentPercentage: Double?,
-        leisurePercentage: Double?,
-        categoryLimitName: String? = null,
-        categoryLimitPercentage: Double? = null
-    ) {
-        val existing = monthlyRevenueDao.getRevenueForMonthDirect(month)
-        monthlyRevenueDao.saveMonthlyRevenue(
-            MonthlyRevenue(
-                month = month,
-                salary = existing?.salary ?: 0.0,
-                extraIncome = existing?.extraIncome ?: 0.0,
-                investmentPercentage = investmentPercentage,
-                leisurePercentage = leisurePercentage,
-                categoryLimitName = categoryLimitName ?: existing?.categoryLimitName,
-                categoryLimitPercentage = categoryLimitPercentage ?: existing?.categoryLimitPercentage
-            )
-        )
+    fun getAllExpenses(): Flow<List<Expense>> {
+        return expenseDao.getAllExpenses()
     }
 
-    fun getRevenuesForMonth(monthPrefix: String): Flow<List<Revenue>> =
-        revenueDao.getRevenuesByMonth(monthPrefix)
-
-    fun getAllRevenues(): Flow<List<Revenue>> =
-        revenueDao.getAllRevenues()
-
-    fun getExpensesForMonth(monthPrefix: String): Flow<List<Expense>> =
-        expenseDao.getExpensesByMonth(monthPrefix)
-
-    fun getAllExpenses(): Flow<List<Expense>> =
-        expenseDao.getAllExpenses()
-
-    suspend fun getUnpaidExpensesDirect(): List<Expense> =
-        expenseDao.getUnpaidExpensesDirect()
-
-    fun getCategories(): Flow<List<Category>> =
-        categoryDao.getAllCategories()
-
-    fun getSettings(): Flow<AppSettings?> =
-        settingsDao.getSettings()
-
-    suspend fun saveSettings(settings: AppSettings) {
-        settingsDao.saveSettings(settings)
-    }
-
-    suspend fun updateSumWithOtherMonths(enabled: Boolean) {
-        val current = settingsDao.getSettingsDirect() ?: AppSettings()
-        settingsDao.saveSettings(current.copy(sumWithOtherMonths = enabled))
-    }
-
-    suspend fun addRevenue(revenue: Revenue): Long {
-        return revenueDao.insertRevenue(revenue)
-    }
-
-    suspend fun updateRevenue(revenue: Revenue) {
-        revenueDao.updateRevenue(revenue)
-    }
-
-    suspend fun deleteRevenue(revenue: Revenue) {
-        revenueDao.deleteRevenue(revenue)
+    fun getExpensesByRecurringGroup(groupId: String): Flow<List<Expense>> {
+        return expenseDao.getExpensesByRecurringGroup(groupId)
     }
 
     suspend fun addExpense(
         description: String,
         amount: Double,
-        dueDate: String,
-        isPaid: Boolean = false,
+        dueDate: LocalDate,
+        category: String,
+        isMonthlyRecurring: Boolean = false,
         recurrenceMonths: Int = 1,
-        category: String = "Geral",
-        isMonthlyRecurring: Boolean = false
+        notes: String = ""
     ) {
-        val paidDate = if (isPaid) CurrencyUtils.todayIso() else null
-        if (!isMonthlyRecurring && recurrenceMonths <= 1) {
-            val single = Expense(
-                description = description,
-                amount = amount,
-                dueDate = dueDate,
-                category = category,
-                isPaid = isPaid,
-                paidDate = paidDate,
-                recurringGroupId = null,
-                recurringIndex = 1,
-                recurringTotal = 1
-            )
-            expenseDao.insertExpense(single)
-        } else if (isMonthlyRecurring) {
-            // Mensal: despesa recorrente sem prazo definido
+        val baseYearMonth = YearMonth.from(dueDate)
+
+        if (isMonthlyRecurring) {
+            // Recorrência mensal fixa (gera 12 meses inicialmente com recurringTotal = -1)
             val groupId = UUID.randomUUID().toString()
-            val countToGenerate = 24 // Gera lançamentos mensais contínuos para os próximos 2 anos
-            val items = (0 until countToGenerate).map { index ->
-                val monthDueDate = CurrencyUtils.addMonthsToIsoDate(dueDate, index.toLong())
-                val itemIsPaid = if (index == 0) isPaid else false
-                val itemPaidDate = if (index == 0 && isPaid) paidDate else null
+            val expenses = (0 until 12).map { offset ->
+                val targetDate = dueDate.plusMonths(offset.toLong())
+                val ym = YearMonth.from(targetDate)
                 Expense(
                     description = description,
                     amount = amount,
-                    dueDate = monthDueDate,
+                    dueDate = targetDate,
                     category = category,
-                    isPaid = itemIsPaid,
-                    paidDate = itemPaidDate,
+                    yearMonth = "%04d-%02d".format(ym.year, ym.monthValue),
                     recurringGroupId = groupId,
-                    recurringIndex = index + 1,
-                    recurringTotal = -1 // -1 indica recorrência mensal contínua sem prazo definido
+                    recurringIndex = offset + 1,
+                    recurringTotal = -1,
+                    notes = notes
                 )
             }
-            expenseDao.insertExpenses(items)
+            expenseDao.insertExpenses(expenses)
+        } else if (recurrenceMonths > 1) {
+            // Parcelamento com quantidade arbitrária de parcelas
+            val groupId = UUID.randomUUID().toString()
+            val installmentAmount = amount / recurrenceMonths
+            val expenses = (0 until recurrenceMonths).map { index ->
+                val targetDate = dueDate.plusMonths(index.toLong())
+                val ym = YearMonth.from(targetDate)
+                Expense(
+                    description = description,
+                    amount = installmentAmount,
+                    dueDate = targetDate,
+                    category = category,
+                    yearMonth = "%04d-%02d".format(ym.year, ym.monthValue),
+                    recurringGroupId = groupId,
+                    recurringIndex = index + 1,
+                    recurringTotal = recurrenceMonths,
+                    notes = notes
+                )
+            }
+            expenseDao.insertExpenses(expenses)
         } else {
-            // Parcelado: quantidade definida livremente pelo usuário
-            val groupId = UUID.randomUUID().toString()
-            val total = recurrenceMonths
-            val items = (0 until total).map { index ->
-                val monthDueDate = CurrencyUtils.addMonthsToIsoDate(dueDate, index.toLong())
-                val itemIsPaid = if (index == 0) isPaid else false
-                val itemPaidDate = if (index == 0 && isPaid) paidDate else null
+            // Despesa única
+            val ymString = "%04d-%02d".format(baseYearMonth.year, baseYearMonth.monthValue)
+            expenseDao.insertExpense(
                 Expense(
                     description = description,
                     amount = amount,
-                    dueDate = monthDueDate,
+                    dueDate = dueDate,
                     category = category,
-                    isPaid = itemIsPaid,
-                    paidDate = itemPaidDate,
-                    recurringGroupId = groupId,
-                    recurringIndex = index + 1,
-                    recurringTotal = total
+                    yearMonth = ymString,
+                    notes = notes
                 )
-            }
-            expenseDao.insertExpenses(items)
+            )
         }
+    }
+
+    suspend fun toggleExpensePaid(expense: Expense) {
+        val updated = expense.copy(
+            isPaid = !expense.isPaid,
+            paidDate = if (!expense.isPaid) LocalDate.now() else null
+        )
+        expenseDao.updateExpense(updated)
     }
 
     suspend fun updateExpense(expense: Expense) {
@@ -183,74 +109,64 @@ class FinanceRepository(
         expenseDao.deleteExpense(expense)
     }
 
-    suspend fun toggleExpensePaymentStatus(expense: Expense) {
-        val updated = if (expense.isPaid) {
-            // Revert to pending
-            expense.copy(isPaid = false, paidDate = null)
-        } else {
-            // Mark as paid
-            expense.copy(isPaid = true, paidDate = CurrencyUtils.todayIso())
-        }
-        expenseDao.updateExpense(updated)
+    suspend fun deleteFutureRecurringExpenses(groupId: String) {
+        expenseDao.deletePendingRecurringExpenses(groupId)
     }
 
-    suspend fun cancelRecurringExpense(groupId: String, afterDate: String) {
-        expenseDao.cancelFutureRecurringExpenses(groupId, afterDate)
+    // Revenues
+    fun getRevenuesForMonth(yearMonth: YearMonth): Flow<List<Revenue>> {
+        val ymString = "%04d-%02d".format(yearMonth.year, yearMonth.monthValue)
+        return revenueDao.getRevenuesForMonth(ymString)
     }
 
-    suspend fun addCategory(name: String): Long {
-        val trimmed = name.trim()
-        if (trimmed.isEmpty()) return -1L
-        val existing = categoryDao.getCategoryByName(trimmed)
-        if (existing != null) {
-            return existing.id
-        }
-        return categoryDao.insertCategory(Category(name = trimmed, isCustom = true))
+    fun getAllRevenues(): Flow<List<Revenue>> {
+        return revenueDao.getAllRevenues()
+    }
+
+    suspend fun addRevenue(revenue: Revenue) {
+        revenueDao.insertRevenue(revenue)
+    }
+
+    suspend fun updateRevenue(revenue: Revenue) {
+        revenueDao.updateRevenue(revenue)
+    }
+
+    suspend fun deleteRevenue(revenue: Revenue) {
+        revenueDao.deleteRevenue(revenue)
+    }
+
+    // Categories
+    fun getCategories(): Flow<List<Category>> {
+        return categoryDao.getAllCategories()
+    }
+
+    suspend fun addCategory(category: Category) {
+        categoryDao.insertCategory(category)
     }
 
     suspend fun deleteCategory(category: Category) {
         categoryDao.deleteCategory(category)
     }
 
-    suspend fun ensureInitialData() {
-        // 1. Purge any duplicate categories that already exist in SQLite
-        categoryDao.deleteDuplicateCategories()
+    // Settings
+    fun getMonthlySettings(yearMonth: YearMonth): Flow<MonthlySettings?> {
+        val ymString = "%04d-%02d".format(yearMonth.year, yearMonth.monthValue)
+        return monthlySettingsDao.getSettingsForMonth(ymString)
+    }
 
-        // 2. Insert standard default categories only if not already present
-        val defaultCategoryNames = listOf(
-            "Alimentação",
-            "Água",
-            "Compras",
-            "Empréstimo",
-            "Energia",
-            "Imposto",
-            "Internet",
-            "Lazer",
-            "Moradia",
-            "Outros",
-            "Saúde",
-            "Transporte"
-        )
-        for (catName in defaultCategoryNames) {
-            val existing = categoryDao.getCategoryByName(catName)
-            if (existing == null) {
-                categoryDao.insertCategory(Category(name = catName, isCustom = false))
-            }
-        }
+    suspend fun updateMonthlySettings(settings: MonthlySettings) {
+        monthlySettingsDao.insertOrUpdate(settings)
+    }
 
-        // Clean up once more to guarantee no duplication
-        categoryDao.deleteDuplicateCategories()
+    fun getFinanceSettings(): Flow<FinanceSettings?> {
+        return financeSettingsDao.getSettings()
+    }
 
-        // 3. Ensure default settings if not yet saved
-        val existingSettings = settingsDao.getSettingsDirect()
-        if (existingSettings == null) {
-            settingsDao.saveSettings(
-                AppSettings(
-                    id = 1,
-                    investmentPercentage = 10.0,
-                    leisurePercentage = 10.0
-                )
-            )
-        }
+    suspend fun updateFinanceSettings(settings: FinanceSettings) {
+        financeSettingsDao.insertOrUpdate(settings)
+    }
+
+    suspend fun getAllPendingExpenses(): List<Expense> {
+        return expenseDao.getAllPendingExpenses()
     }
 }

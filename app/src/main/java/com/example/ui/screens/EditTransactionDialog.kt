@@ -1,370 +1,86 @@
 package com.example.ui.screens
 
 import android.app.DatePickerDialog
-import android.widget.Toast
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.material.icons.filled.CreditCard
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.TrendingUp
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.data.model.Category
 import com.example.data.model.Expense
 import com.example.data.model.Revenue
-import com.example.ui.theme.LeisurePurple
-import com.example.ui.theme.OverdueRed
-import com.example.ui.theme.PaidGreen
-import com.example.ui.theme.PendingYellow
 import com.example.util.CurrencyUtils
-import java.util.Calendar
-import java.util.Locale
-import kotlin.math.max
+import java.time.LocalDate
 
 @Composable
 fun EditExpenseDialog(
     expense: Expense,
-    categories: List<Category> = emptyList(),
-    leisureLimit: Double = 0.0,
-    leisureSpent: Double = 0.0,
+    categories: List<Category>,
     onDismiss: () -> Unit,
-    onConfirm: (Expense) -> Unit
+    onSave: (Expense) -> Unit
 ) {
     var description by remember { mutableStateOf(expense.description) }
-    var amountText by remember { mutableStateOf(expense.amount.toString().replace(".", ",")) }
+    var amountText by remember { mutableStateOf(expense.amount.toString()) }
+    var selectedCategory by remember { mutableStateOf(expense.category) }
     var dueDate by remember { mutableStateOf(expense.dueDate) }
-    var isPaid by remember { mutableStateOf(expense.isPaid) }
-    var selectedCategory by remember { mutableStateOf(if (expense.category.isNotBlank()) expense.category else "Outros") }
-
-    val defaultCategories = listOf(
-        "Alimentação",
-        "Água",
-        "Compras",
-        "Empréstimo",
-        "Energia",
-        "Imposto",
-        "Internet",
-        "Lazer",
-        "Moradia",
-        "Outros",
-        "Saúde",
-        "Transporte"
-    )
-    val availableCategories = remember(categories) {
-        val collator = java.text.Collator.getInstance(java.util.Locale("pt", "BR")).apply {
-            strength = java.text.Collator.PRIMARY
-        }
-        val fromDb = categories.map { it.name.trim() }.filter { it.isNotBlank() }
-        (defaultCategories + fromDb).distinct().sortedWith { a, b -> collator.compare(a, b) }
-    }
 
     val context = LocalContext.current
-
-    fun showDatePicker() {
-        val calendar = Calendar.getInstance()
-        val parts = dueDate.split("-")
-        if (parts.size == 3) {
-            parts[0].toIntOrNull()?.let { calendar.set(Calendar.YEAR, it) }
-            parts[1].toIntOrNull()?.let { calendar.set(Calendar.MONTH, it - 1) }
-            parts[2].toIntOrNull()?.let { calendar.set(Calendar.DAY_OF_MONTH, it) }
-        }
+    val datePickerDialog = remember {
         DatePickerDialog(
             context,
             { _, year, month, dayOfMonth ->
-                dueDate = String.format(Locale.US, "%04d-%02d-%02d", year, month + 1, dayOfMonth)
+                dueDate = LocalDate.of(year, month + 1, dayOfMonth)
             },
-            calendar.get(Calendar.YEAR),
-            calendar.get(Calendar.MONTH),
-            calendar.get(Calendar.DAY_OF_MONTH)
-        ).show()
+            dueDate.year,
+            dueDate.monthValue - 1,
+            dueDate.dayOfMonth
+        )
     }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Editar Despesa", fontWeight = FontWeight.Bold) },
+        title = { Text("Editar Despesa") },
         text = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
                     label = { Text("Descrição") },
                     singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("edit_input_description")
+                    modifier = Modifier.fillMaxWidth()
                 )
-
                 OutlinedTextField(
                     value = amountText,
-                    onValueChange = { amountText = it },
+                    onValueChange = { amountText = it.replace(",", ".") },
                     label = { Text("Valor (R$)") },
-                    prefix = { Text("R$ ") },
                     singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("edit_input_amount")
+                    modifier = Modifier.fillMaxWidth()
                 )
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
+                OutlinedButton(
+                    onClick = { datePickerDialog.show() },
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    OutlinedTextField(
-                        value = CurrencyUtils.formatToDisplayDate(dueDate),
-                        onValueChange = { },
-                        readOnly = true,
-                        label = { Text("Data de Vencimento") },
-                        supportingText = { Text("Toque para escolher o dia no calendário") },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.CalendarToday,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        },
-                        trailingIcon = {
-                            IconButton(onClick = { showDatePicker() }) {
-                                Icon(
-                                    imageVector = Icons.Default.CalendarMonth,
-                                    contentDescription = "Abrir calendário",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        },
-                        singleLine = true,
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("edit_input_due_date")
-                    )
-
-                    Box(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable { showDatePicker() }
-                    )
-                }
-
-                Text(
-                    text = "Categoria",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    availableCategories.forEach { cat ->
-                        val isLazer = cat.equals("Lazer", ignoreCase = true)
-                        val isSelected = selectedCategory.equals(cat, ignoreCase = true)
-                        FilterChip(
-                            selected = isSelected,
-                            onClick = { selectedCategory = cat },
-                            label = {
-                                Text(
-                                    text = cat,
-                                    fontSize = 12.sp,
-                                    fontWeight = if (isLazer) FontWeight.SemiBold else FontWeight.Normal
-                                )
-                            },
-                            colors = if (isLazer) {
-                                FilterChipDefaults.filterChipColors(
-                                    containerColor = LeisurePurple.copy(alpha = 0.08f),
-                                    labelColor = LeisurePurple,
-                                    selectedContainerColor = LeisurePurple.copy(alpha = 0.22f),
-                                    selectedLabelColor = LeisurePurple
-                                )
-                            } else {
-                                FilterChipDefaults.filterChipColors()
-                            },
-                            border = if (isLazer) {
-                                BorderStroke(1.dp, LeisurePurple.copy(alpha = if (isSelected) 0.8f else 0.4f))
-                            } else {
-                                FilterChipDefaults.filterChipBorder(enabled = true, selected = isSelected)
-                            }
-                        )
-                    }
-                }
-
-                if (selectedCategory.equals("Lazer", ignoreCase = true) && leisureLimit > 0) {
-                    val currentTypedAmount = CurrencyUtils.parseAmount(amountText)
-                    val oldAmount = if (expense.category.equals("Lazer", ignoreCase = true)) expense.amount else 0.0
-                    val projectedSpent = leisureSpent - oldAmount + currentTypedAmount
-                    val isExceeding = projectedSpent > leisureLimit
-                    val diff = if (isExceeding) projectedSpent - leisureLimit else 0.0
-
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = if (isExceeding) OverdueRed.copy(alpha = 0.1f) else LeisurePurple.copy(alpha = 0.08f),
-                        border = BorderStroke(1.dp, if (isExceeding) OverdueRed.copy(alpha = 0.4f) else LeisurePurple.copy(alpha = 0.25f)),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.padding(10.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = if (isExceeding) Icons.Default.Warning else Icons.Default.Info,
-                                    contentDescription = null,
-                                    tint = if (isExceeding) OverdueRed else LeisurePurple,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = if (isExceeding) "Aviso: Limite de Lazer" else "Acompanhamento de Lazer",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isExceeding) OverdueRed else LeisurePurple
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(3.dp))
-                            if (isExceeding) {
-                                Text(
-                                    text = "Você ultrapassou o limite recomendado para lazer deste mês em ${CurrencyUtils.formatCurrency(diff)}.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = OverdueRed
-                                )
-                            } else {
-                                Text(
-                                    text = "Limite recomendado: ${CurrencyUtils.formatCurrency(leisureLimit)} • Já gasto: ${CurrencyUtils.formatCurrency(leisureSpent)} • Restante: ${CurrencyUtils.formatCurrency(max(0.0, leisureLimit - projectedSpent))}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
-                }
-
-                Text(
-                    text = "Status",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    FilterChip(
-                        selected = !isPaid,
-                        onClick = { isPaid = false },
-                        label = { Text("○ A Pagar", fontWeight = FontWeight.Bold) },
-                        modifier = Modifier.weight(1f),
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = PendingYellow.copy(alpha = 0.2f),
-                            selectedLabelColor = PendingYellow
-                        )
-                    )
-                    FilterChip(
-                        selected = isPaid,
-                        onClick = { isPaid = true },
-                        label = { Text("✓ Paga", fontWeight = FontWeight.Bold) },
-                        modifier = Modifier.weight(1f),
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = PaidGreen.copy(alpha = 0.2f),
-                            selectedLabelColor = PaidGreen
-                        )
-                    )
+                    Text("Vencimento: ${CurrencyUtils.formatToDisplayDate(dueDate)}")
                 }
             }
         },
         confirmButton = {
             Button(
                 onClick = {
-                    val amount = CurrencyUtils.parseAmount(amountText)
-                    if (description.isBlank() || amount <= 0.0) {
-                        return@Button
-                    }
-                    if (selectedCategory.isBlank()) {
-                        Toast.makeText(context, "Selecione uma categoria para continuar.", Toast.LENGTH_SHORT).show()
-                        return@Button
-                    }
-
-                    onConfirm(
-                        expense.copy(
-                            description = description.trim(),
-                            amount = amount,
-                            dueDate = dueDate.trim(),
-                            isPaid = isPaid,
-                            category = selectedCategory.trim(),
-                            paidDate = if (isPaid) (expense.paidDate ?: CurrencyUtils.todayIso()) else null
+                    val amount = amountText.toDoubleOrNull() ?: expense.amount
+                    if (description.isNotBlank() && amount > 0.0) {
+                        onSave(
+                            expense.copy(
+                                description = description.trim(),
+                                amount = amount,
+                                dueDate = dueDate,
+                                category = selectedCategory
+                            )
                         )
-                    )
-
-                        if (selectedCategory.equals("Lazer", ignoreCase = true) && leisureLimit > 0) {
-                            val oldAmount = if (expense.category.equals("Lazer", ignoreCase = true)) expense.amount else 0.0
-                            val projectedSpent = leisureSpent - oldAmount + amount
-                            if (projectedSpent > leisureLimit) {
-                                val overAmount = projectedSpent - leisureLimit
-                                Toast.makeText(
-                                    context,
-                                    "Você ultrapassou o limite recomendado para lazer deste mês em ${CurrencyUtils.formatCurrency(overAmount)}.",
-                                    Toast.LENGTH_LONG
-                                ).show()
-                            }
-                        }
-
                         onDismiss()
-                },
-                shape = RoundedCornerShape(10.dp)
+                    }
+                }
             ) {
                 Text("Salvar")
             }
@@ -381,43 +97,16 @@ fun EditExpenseDialog(
 fun EditRevenueDialog(
     revenue: Revenue,
     onDismiss: () -> Unit,
-    onConfirm: (Revenue) -> Unit
+    onSave: (Revenue) -> Unit
 ) {
     var description by remember { mutableStateOf(revenue.description) }
-    var amountText by remember { mutableStateOf(revenue.amount.toString().replace(".", ",")) }
-    var date by remember { mutableStateOf(revenue.date) }
-
-    val context = LocalContext.current
-
-    fun showDatePicker() {
-        val calendar = Calendar.getInstance()
-        val parts = date.split("-")
-        if (parts.size == 3) {
-            parts[0].toIntOrNull()?.let { calendar.set(Calendar.YEAR, it) }
-            parts[1].toIntOrNull()?.let { calendar.set(Calendar.MONTH, it - 1) }
-            parts[2].toIntOrNull()?.let { calendar.set(Calendar.DAY_OF_MONTH, it) }
-        }
-        DatePickerDialog(
-            context,
-            { _, year, month, dayOfMonth ->
-                date = String.format(Locale.US, "%04d-%02d-%02d", year, month + 1, dayOfMonth)
-            },
-            calendar.get(Calendar.YEAR),
-            calendar.get(Calendar.MONTH),
-            calendar.get(Calendar.DAY_OF_MONTH)
-        ).show()
-    }
+    var amountText by remember { mutableStateOf(revenue.amount.toString()) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Editar Receita", fontWeight = FontWeight.Bold) },
+        title = { Text("Editar Receita") },
         text = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
@@ -425,67 +114,24 @@ fun EditRevenueDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-
                 OutlinedTextField(
                     value = amountText,
-                    onValueChange = { amountText = it },
+                    onValueChange = { amountText = it.replace(",", ".") },
                     label = { Text("Valor (R$)") },
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                ) {
-                    OutlinedTextField(
-                        value = CurrencyUtils.formatToDisplayDate(date),
-                        onValueChange = { },
-                        readOnly = true,
-                        label = { Text("Data") },
-                        supportingText = { Text("Toque para escolher o dia no calendário") },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.CalendarToday,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        },
-                        trailingIcon = {
-                            IconButton(onClick = { showDatePicker() }) {
-                                Icon(
-                                    imageVector = Icons.Default.CalendarMonth,
-                                    contentDescription = "Abrir calendário",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        },
-                        singleLine = true,
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Box(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable { showDatePicker() }
-                    )
-                }
             }
         },
         confirmButton = {
             Button(
                 onClick = {
-                    val amount = CurrencyUtils.parseAmount(amountText)
+                    val amount = amountText.toDoubleOrNull() ?: revenue.amount
                     if (description.isNotBlank() && amount > 0.0) {
-                        onConfirm(
+                        onSave(
                             revenue.copy(
                                 description = description.trim(),
-                                amount = amount,
-                                date = date.trim()
+                                amount = amount
                             )
                         )
                         onDismiss()

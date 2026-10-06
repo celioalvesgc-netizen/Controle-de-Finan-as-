@@ -1,72 +1,21 @@
 package com.example.ui.viewmodel
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.data.model.AppSettings
-import com.example.data.model.Category
-import com.example.data.model.Expense
-import com.example.data.model.ExpenseFilter
-import com.example.data.model.MonthlyRevenue
-import com.example.data.model.Revenue
+import com.example.data.database.AppDatabase
+import com.example.data.model.*
 import com.example.data.repository.FinanceRepository
 import com.example.util.CurrencyUtils
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
-import kotlin.math.max
 
-const val DEFAULT_SYSTEM_INVESTMENT_PERCENTAGE = 20.0
-const val DEFAULT_SYSTEM_LEISURE_PERCENTAGE = 10.0
-
-data class FinanceSummary(
-    val monthYear: YearMonth,
-    val salary: Double = 0.0,
-    val extraIncome: Double = 0.0,
-    val totalRevenue: Double = 0.0,
-    val revenuesCount: Int = 0,
-    val investmentPercentage: Double = DEFAULT_SYSTEM_INVESTMENT_PERCENTAGE,
-    val investmentAllocated: Double = 0.0,
-    val leisurePercentage: Double = DEFAULT_SYSTEM_LEISURE_PERCENTAGE,
-    val leisureLimit: Double = 0.0,
-    val leisureSpent: Double = 0.0,
-    val leisureAvailable: Double = 0.0,
-    val leisureOverBudget: Double = 0.0,
-    // Limite por categoria flexível (substitui/generaliza o limite de lazer)
-    val categoryLimitName: String = "Lazer",
-    val categoryLimitPercentage: Double = DEFAULT_SYSTEM_LEISURE_PERCENTAGE,
-    val categoryLimitAmount: Double = 0.0,
-    val categoryLimitSpent: Double = 0.0,
-    val categoryLimitAvailable: Double = 0.0,
-    val categoryLimitOverBudget: Double = 0.0,
-    val totalExpenses: Double = 0.0,
-    val generalExpenses: Double = 0.0,
-    val spendingLimit: Double = 0.0,
-    val availableForSpending: Double = 0.0,
-    val totalPaid: Double = 0.0,
-    val totalPending: Double = 0.0,
-    val totalOverdue: Double = 0.0,
-    val emergencyFundMonth: Double = 0.0,
-    val emergencyFundAccumulated: Double = 0.0,
-    val availableBalanceMonth: Double = 0.0,
-    val availableBalancePreviousMonths: Double = 0.0,
-    val availableBalanceTotal: Double = 0.0,
-    val isAccumulatingWithOtherMonths: Boolean = true,
-    val projectedBalanceMonth: Double = 0.0,
-    val projectedBalanceTotal: Double = 0.0
-)
-
-class FinanceViewModel(
-    private val repository: FinanceRepository
-) : ViewModel() {
+@OptIn(ExperimentalCoroutinesApi::class)
+class FinanceViewModel(application: Application) : AndroidViewModel(application) {
+    private val repository = FinanceRepository(AppDatabase.getDatabase(application))
 
     private val _selectedYearMonth = MutableStateFlow(YearMonth.now())
     val selectedYearMonth: StateFlow<YearMonth> = _selectedYearMonth.asStateFlow()
@@ -74,358 +23,191 @@ class FinanceViewModel(
     private val _expenseFilter = MutableStateFlow(ExpenseFilter.TODAS)
     val expenseFilter: StateFlow<ExpenseFilter> = _expenseFilter.asStateFlow()
 
-    init {
-        viewModelScope.launch {
-            repository.ensureInitialData()
-        }
-    }
-
-    val settings: StateFlow<AppSettings> = repository.getSettings()
-        .flatMapLatest { s ->
-            MutableStateFlow(s ?: AppSettings(id = 1, investmentPercentage = 10.0, leisurePercentage = 10.0, sumWithOtherMonths = true))
-        }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AppSettings())
-
-    fun toggleSumWithOtherMonths(enabled: Boolean? = null) {
-        val target = enabled ?: !settings.value.sumWithOtherMonths
-        viewModelScope.launch {
-            repository.updateSumWithOtherMonths(target)
-        }
-    }
-
-    val currentMonthlyRevenue: StateFlow<MonthlyRevenue> = _selectedYearMonth
-        .flatMapLatest { ym ->
-            repository.getMonthlyRevenue(ym.toString()).map {
-                it ?: MonthlyRevenue(month = ym.toString(), salary = 0.0, extraIncome = 0.0)
-            }
-        }
-        .stateIn(
-            viewModelScope,
-            SharingStarted.WhileSubscribed(5000),
-            MonthlyRevenue(month = YearMonth.now().toString(), salary = 0.0, extraIncome = 0.0)
-        )
-
-    val allMonthlyRevenues: StateFlow<List<MonthlyRevenue>> = repository.getAllMonthlyRevenues()
+    val categories: StateFlow<List<Category>> = repository.getCategories()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val settings: StateFlow<FinanceSettings> = repository.getFinanceSettings()
+        .map { it ?: FinanceSettings() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), FinanceSettings())
 
     val currentMonthExpenses: StateFlow<List<Expense>> = _selectedYearMonth
-        .flatMapLatest { ym -> repository.getExpensesForMonth(ym.toString()) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    val allExpenses: StateFlow<List<Expense>> = repository.getAllExpenses()
+        .flatMapLatest { ym -> repository.getExpensesForMonth(ym) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val currentMonthRevenues: StateFlow<List<Revenue>> = _selectedYearMonth
-        .flatMapLatest { ym -> repository.getRevenuesForMonth(ym.toString()) }
+        .flatMapLatest { ym -> repository.getRevenuesForMonth(ym) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val allRevenues: StateFlow<List<Revenue>> = repository.getAllRevenues()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val categories: StateFlow<List<Category>> = repository.getCategories()
-        .map { list ->
-            val collator = java.text.Collator.getInstance(java.util.Locale("pt", "BR")).apply {
-                strength = java.text.Collator.PRIMARY
-            }
-            list.distinctBy { it.name.trim().lowercase() }
-                .sortedWith { a, b -> collator.compare(a.name, b.name) }
-        }
+    val allExpenses: StateFlow<List<Expense>> = repository.getAllExpenses()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private data class MonthData(
-        val ym: YearMonth,
-        val monthlyRev: MonthlyRevenue,
-        val revenues: List<Revenue>,
-        val expenses: List<Expense>
-    )
+    val monthlySettings: StateFlow<MonthlySettings?> = _selectedYearMonth
+        .flatMapLatest { ym -> repository.getMonthlySettings(ym) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    private val currentMonthData = combine(
-        _selectedYearMonth,
-        currentMonthlyRevenue,
-        currentMonthRevenues,
-        currentMonthExpenses
-    ) { ym, monthlyRev, revenues, expenses ->
-        MonthData(ym, monthlyRev, revenues, expenses)
-    }
+    // Summary calculation
+    private data class AllDataAux(
+        val allExpenses: List<Expense>,
+        val allRevenues: List<Revenue>,
+        val settings: FinanceSettings,
+        val currentYm: YearMonth
+    )
 
     val summary: StateFlow<FinanceSummary> = combine(
-        currentMonthData,
-        allMonthlyRevenues,
-        allRevenues,
-        allExpenses,
-        settings
-    ) { monthData, allMonthlyRevs, allRevs, allExp, sett ->
-        calculateSummary(
-            yearMonth = monthData.ym,
-            monthlyRev = monthData.monthlyRev,
-            revenues = monthData.revenues,
-            expenses = monthData.expenses,
-            allMonthlyRevs = allMonthlyRevs,
-            allRevs = allRevs,
-            allExp = allExp,
-            settings = sett
-        )
-    }.stateIn(
-        viewModelScope,
-        SharingStarted.WhileSubscribed(5000),
-        FinanceSummary(monthYear = YearMonth.now())
-    )
-
-    private fun calculateSummary(
-        yearMonth: YearMonth,
-        monthlyRev: MonthlyRevenue,
-        revenues: List<Revenue>,
-        expenses: List<Expense>,
-        allMonthlyRevs: List<MonthlyRevenue>,
-        allRevs: List<Revenue>,
-        allExp: List<Expense>,
-        settings: AppSettings
-    ): FinanceSummary {
-        val revenuesSum = revenues.sumOf { it.amount }
-        val totalRevenue = if (revenues.isNotEmpty()) {
-            revenuesSum
-        } else {
-            monthlyRev.salary + monthlyRev.extraIncome
+        combine(currentMonthExpenses, currentMonthRevenues, monthlySettings) { exp, rev, mSet ->
+            Triple(exp, rev, mSet)
+        },
+        combine(allExpenses, allRevenues, settings, _selectedYearMonth) { allExp, allRev, fSet, ym ->
+            AllDataAux(allExp, allRev, fSet, ym)
         }
-        val revenuesCount = if (revenues.isNotEmpty()) revenues.size else (if (totalRevenue > 0) 1 else 0)
+    ) { (currentExp, currentRev, mSettings), aux ->
+        val allExp = aux.allExpenses
+        val allRev = aux.allRevenues
+        val fSettings = aux.settings
+        val currentYm = aux.currentYm
 
-        val salary = if (revenues.isNotEmpty()) revenuesSum else monthlyRev.salary
-        val extraIncome = if (revenues.isNotEmpty()) 0.0 else monthlyRev.extraIncome
+        val totalRevenue = currentRev.sumOf { it.amount }
+        val totalExpenses = currentExp.sumOf { it.amount }
 
-        // Monthly specific percentage or fallback to system defaults:
-        val invPercent = monthlyRev.investmentPercentage ?: DEFAULT_SYSTEM_INVESTMENT_PERCENTAGE
-        val catLimitName = (monthlyRev.categoryLimitName ?: settings.categoryLimitName).ifBlank { "Lazer" }
-        val catLimitPercent = monthlyRev.categoryLimitPercentage
-            ?: monthlyRev.leisurePercentage
-            ?: settings.categoryLimitPercentage
-        val isSummingWithOtherMonths = settings.sumWithOtherMonths
-
-        val investmentAllocated = if (totalRevenue > 0) totalRevenue * (invPercent / 100.0) else 0.0
-
-        // Limite por categoria flexível:
-        val categoryLimitAmount = if (totalRevenue > 0) totalRevenue * (catLimitPercent / 100.0) else 0.0
-        val categoryLimitSpent = expenses
-            .filter { it.category.equals(catLimitName, ignoreCase = true) }
-            .sumOf { it.amount }
-        val categoryLimitAvailable = max(0.0, categoryLimitAmount - categoryLimitSpent)
-        val categoryLimitOverBudget = max(0.0, categoryLimitSpent - categoryLimitAmount)
-
-        // Para retrocompatibilidade de campos de lazer:
-        val leisureLimit = categoryLimitAmount
-        val leisureSpent = categoryLimitSpent
-        val leisureAvailable = categoryLimitAvailable
-        val leisureOverBudget = categoryLimitOverBudget
-
-        val totalExpenses = expenses.sumOf { it.amount }
-        val generalExpenses = expenses
-            .filter { !it.category.equals(catLimitName, ignoreCase = true) }
-            .sumOf { it.amount }
-
-        val spendingLimit = max(0.0, totalRevenue - investmentAllocated)
-
-        val today = LocalDate.now()
         var totalPaid = 0.0
         var totalPending = 0.0
         var totalOverdue = 0.0
 
-        expenses.forEach { exp ->
-            if (exp.isPaid) {
-                totalPaid += exp.amount
-            } else {
-                val status = CurrencyUtils.computePaymentStatus(exp, today)
-                if (status == com.example.data.model.PaymentStatus.VENCIDA) {
-                    totalOverdue += exp.amount
-                } else {
-                    totalPending += exp.amount
-                }
+        currentExp.forEach { exp ->
+            when (CurrencyUtils.computePaymentStatus(exp)) {
+                PaymentStatus.PAGA -> totalPaid += exp.amount
+                PaymentStatus.A_PAGAR -> totalPending += exp.amount
+                PaymentStatus.VENCIDA -> totalOverdue += exp.amount
             }
         }
 
-        val availableForSpending = max(0.0, spendingLimit - totalPaid)
+        val investPercent = mSettings?.investmentPercentage ?: fSettings.defaultInvestmentPercent
+        val catLimitPercent = mSettings?.categoryLimitPercentage ?: fSettings.defaultCategoryLimitPercent
+        val catLimitName = mSettings?.categoryLimitName ?: fSettings.defaultCategoryLimitName
+        val isAccumulating = mSettings?.isAccumulatingWithOtherMonths ?: false
 
-        // Saldo disponível calculado para o mês selecionado (mês a mês):
-        val availableMonth = if (totalRevenue > 0) {
-            max(0.0, totalRevenue - investmentAllocated - totalPaid)
-        } else {
-            0.0
-        }
+        val investAllocated = (totalRevenue * investPercent) / 100.0
+        val catLimitAmount = (totalRevenue * catLimitPercent) / 100.0
 
-        // Saldo disponível acumulado dos meses anteriores ao mês selecionado:
-        val currentMonthStr = yearMonth.toString()
-        val previousMonthsBalance = calculatePreviousMonthsAvailableBalance(
-            currentMonthStr = currentMonthStr,
-            allMonthlyRevs = allMonthlyRevs,
-            allRevs = allRevs,
-            allExp = allExp
-        )
+        val catSpent = currentExp
+            .filter { it.category.equals(catLimitName, ignoreCase = true) }
+            .sumOf { it.amount }
 
-        val totalAccumulated = previousMonthsBalance + availableMonth
-        val effectiveAccumulated = if (isSummingWithOtherMonths) totalAccumulated else availableMonth
+        // Saldo disponível deste mês = Receita - Investimento Destinado - Despesas Pagas
+        val availableMonth = (totalRevenue - investAllocated - totalPaid).coerceAtLeast(0.0)
 
-        val projectedBalanceMonth = if (totalRevenue > 0) {
-            max(0.0, totalRevenue - investmentAllocated - totalExpenses)
-        } else {
-            0.0
-        }
-        val remainingToPay = totalPending + totalOverdue
-        val projectedBalanceTotal = max(0.0, totalAccumulated - remainingToPay)
+        // Saldo dos outros meses anteriores
+        val currentYmString = "%04d-%02d".format(currentYm.year, currentYm.monthValue)
+        val prevRevenues = allRev.filter { it.yearMonth < currentYmString }.sumOf { it.amount }
+        val prevPaidExpenses = allExp.filter { it.yearMonth < currentYmString && it.isPaid }.sumOf { it.amount }
+        val prevInvestments = (prevRevenues * investPercent) / 100.0
+        val availablePrevious = (prevRevenues - prevInvestments - prevPaidExpenses).coerceAtLeast(0.0)
 
-        return FinanceSummary(
-            monthYear = yearMonth,
-            salary = salary,
-            extraIncome = extraIncome,
+        val availableTotal = availableMonth + availablePrevious
+
+        // Saldo projetado após quitar tudo (descontando pendentes e vencidas)
+        val remainingToPayMonth = totalPending + totalOverdue
+        val projectedMonth = (totalRevenue - investAllocated - totalExpenses)
+        val projectedTotal = availableTotal - remainingToPayMonth
+
+        FinanceSummary(
             totalRevenue = totalRevenue,
-            revenuesCount = revenuesCount,
-            investmentPercentage = invPercent,
-            investmentAllocated = investmentAllocated,
-            leisurePercentage = catLimitPercent,
-            leisureLimit = leisureLimit,
-            leisureSpent = leisureSpent,
-            leisureAvailable = leisureAvailable,
-            leisureOverBudget = leisureOverBudget,
-            categoryLimitName = catLimitName,
-            categoryLimitPercentage = catLimitPercent,
-            categoryLimitAmount = categoryLimitAmount,
-            categoryLimitSpent = categoryLimitSpent,
-            categoryLimitAvailable = categoryLimitAvailable,
-            categoryLimitOverBudget = categoryLimitOverBudget,
             totalExpenses = totalExpenses,
-            generalExpenses = generalExpenses,
-            spendingLimit = spendingLimit,
-            availableForSpending = availableForSpending,
             totalPaid = totalPaid,
             totalPending = totalPending,
             totalOverdue = totalOverdue,
-            emergencyFundMonth = availableMonth,
-            emergencyFundAccumulated = effectiveAccumulated,
+            investmentPercentage = investPercent,
+            investmentAllocated = investAllocated,
+            categoryLimitPercentage = catLimitPercent,
+            categoryLimitName = catLimitName,
+            categoryLimitAmount = catLimitAmount,
+            categoryLimitSpent = catSpent,
             availableBalanceMonth = availableMonth,
-            availableBalancePreviousMonths = previousMonthsBalance,
-            availableBalanceTotal = totalAccumulated,
-            isAccumulatingWithOtherMonths = isSummingWithOtherMonths,
-            projectedBalanceMonth = projectedBalanceMonth,
-            projectedBalanceTotal = projectedBalanceTotal
+            availableBalancePreviousMonths = availablePrevious,
+            availableBalanceTotal = availableTotal,
+            projectedBalanceMonth = projectedMonth,
+            projectedBalanceTotal = projectedTotal,
+            isAccumulatingWithOtherMonths = isAccumulating
         )
-    }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), FinanceSummary())
 
-    private fun calculatePreviousMonthsAvailableBalance(
-        currentMonthStr: String,
-        allMonthlyRevs: List<MonthlyRevenue>,
-        allRevs: List<Revenue>,
-        allExp: List<Expense>
-    ): Double {
-        val revByMonth = allMonthlyRevs.associateBy { it.month }
-        val revListByMonth = allRevs.groupBy { if (it.date.length >= 7) it.date.take(7) else "" }
-        val expByMonth = allExp.groupBy { it.dueDate.take(7) }
-        val previousMonthKeys = (revByMonth.keys + revListByMonth.keys + expByMonth.keys)
-            .filter { it.isNotBlank() && it < currentMonthStr }
-            .distinct()
-            .sorted()
+    val categoryTotals: StateFlow<Map<String, Double>> = currentMonthExpenses.map { expenses ->
+        expenses.groupBy { it.category }.mapValues { (_, list) -> list.sumOf { it.amount } }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
-        var accumulated = 0.0
-        for (m in previousMonthKeys) {
-            val revObj = revByMonth[m]
-            val fromList = revListByMonth[m]?.sumOf { it.amount } ?: 0.0
-            val rev = if (fromList > 0.0) fromList else (revObj?.totalRevenue ?: 0.0)
-            if (rev > 0) {
-                val invPercent = revObj?.investmentPercentage ?: DEFAULT_SYSTEM_INVESTMENT_PERCENTAGE
-                val inv = rev * (invPercent / 100.0)
-                val totalPaidExp = expByMonth[m]?.filter { it.isPaid }?.sumOf { it.amount } ?: 0.0
-                val sobra = max(0.0, rev - inv - totalPaidExp)
-                accumulated += sobra
-            }
-        }
-        return accumulated
-    }
-
-    fun setFilter(filter: ExpenseFilter) {
-        _expenseFilter.value = filter
-    }
-
-    fun nextMonth() {
-        _selectedYearMonth.value = _selectedYearMonth.value.plusMonths(1)
+    fun selectMonth(yearMonth: YearMonth) {
+        _selectedYearMonth.value = yearMonth
     }
 
     fun previousMonth() {
         _selectedYearMonth.value = _selectedYearMonth.value.minusMonths(1)
     }
 
-    fun goToCurrentMonth() {
+    fun nextMonth() {
+        _selectedYearMonth.value = _selectedYearMonth.value.plusMonths(1)
+    }
+
+    fun resetCurrentMonth() {
         _selectedYearMonth.value = YearMonth.now()
     }
 
-    fun updateMonthlyRevenue(salary: Double, extraIncome: Double) {
-        val month = _selectedYearMonth.value.toString()
-        viewModelScope.launch {
-            repository.saveMonthlyRevenue(month, salary, extraIncome)
-        }
+    fun setFilter(filter: ExpenseFilter) {
+        _expenseFilter.value = filter
     }
 
-    fun updateMonthlyPercentages(
-        month: String = _selectedYearMonth.value.toString(),
-        invPercent: Double?,
-        leisurePercent: Double?,
-        categoryLimitName: String? = null,
-        categoryLimitPercent: Double? = null
+    fun addExpense(
+        description: String,
+        amount: Double,
+        dueDate: LocalDate,
+        category: String,
+        isMonthlyRecurring: Boolean,
+        recurrenceMonths: Int,
+        notes: String
     ) {
         viewModelScope.launch {
-            repository.saveMonthlyPercentages(
-                month = month,
-                investmentPercentage = invPercent,
-                leisurePercentage = leisurePercent,
-                categoryLimitName = categoryLimitName,
-                categoryLimitPercentage = categoryLimitPercent
+            repository.addExpense(
+                description,
+                amount,
+                dueDate,
+                category,
+                isMonthlyRecurring,
+                recurrenceMonths,
+                notes
             )
         }
     }
 
-    fun saveCategoryLimit(
-        month: String = _selectedYearMonth.value.toString(),
-        categoryName: String,
-        percentage: Double
-    ) {
+    fun toggleExpensePaid(expense: Expense) {
         viewModelScope.launch {
-            val currentRev = repository.getMonthlyRevenueDirect(month)
-            repository.saveMonthlyPercentages(
-                month = month,
-                investmentPercentage = currentRev?.investmentPercentage,
-                leisurePercentage = percentage,
-                categoryLimitName = categoryName,
-                categoryLimitPercentage = percentage
-            )
+            repository.toggleExpensePaid(expense)
         }
     }
 
-    fun resetMonthlyPercentagesToDefault(month: String = _selectedYearMonth.value.toString()) {
+    fun updateExpense(expense: Expense) {
         viewModelScope.launch {
-            repository.saveMonthlyPercentages(month, null, null, null, null)
+            repository.updateExpense(expense)
         }
     }
 
-    fun updateSalary(salary: Double) {
-        val month = _selectedYearMonth.value.toString()
-        val currentExtra = currentMonthlyRevenue.value.extraIncome
+    fun deleteExpense(expense: Expense) {
         viewModelScope.launch {
-            repository.saveMonthlyRevenue(month, salary, currentExtra)
+            repository.deleteExpense(expense)
         }
     }
 
-    fun updateExtraIncome(extraIncome: Double) {
-        val month = _selectedYearMonth.value.toString()
-        val currentSalary = currentMonthlyRevenue.value.salary
+    fun addRevenue(description: String, amount: Double, date: LocalDate, isRecurring: Boolean = false) {
         viewModelScope.launch {
-            repository.saveMonthlyRevenue(month, currentSalary, extraIncome)
-        }
-    }
-
-    fun addRevenue(description: String, amount: Double, date: String) {
-        viewModelScope.launch {
-            val safeDate = if (date.isNotBlank()) date else "${_selectedYearMonth.value}-01"
-            val safeDesc = if (description.isNotBlank()) description.trim() else "Receita"
+            val ym = YearMonth.from(date)
             repository.addRevenue(
                 Revenue(
-                    description = safeDesc,
-                    amount = max(0.0, amount),
-                    date = safeDate
+                    description = description,
+                    amount = amount,
+                    date = date,
+                    yearMonth = "%04d-%02d".format(ym.year, ym.monthValue),
+                    isRecurring = isRecurring
                 )
             )
         }
@@ -443,104 +225,49 @@ class FinanceViewModel(
         }
     }
 
-    fun addExpense(
-        description: String,
-        amount: Double,
-        dueDate: String,
-        isPaid: Boolean = false,
-        recurrenceMonths: Int = 1,
-        category: String = "Geral",
-        isMonthlyRecurring: Boolean = false
-    ) {
+    fun updateMonthlyPercentages(investPercent: Double, catLimitPercent: Double, catLimitName: String) {
         viewModelScope.launch {
-            repository.addExpense(
-                description = description.trim(),
-                amount = amount,
-                dueDate = dueDate,
-                isPaid = isPaid,
-                recurrenceMonths = recurrenceMonths,
-                category = category,
-                isMonthlyRecurring = isMonthlyRecurring
-            )
-        }
-    }
-
-    fun updateExpense(expense: Expense) {
-        viewModelScope.launch {
-            repository.updateExpense(expense)
-        }
-    }
-
-    fun deleteExpense(expense: Expense) {
-        viewModelScope.launch {
-            repository.deleteExpense(expense)
-        }
-    }
-
-    fun toggleExpensePayment(expense: Expense) {
-        viewModelScope.launch {
-            repository.toggleExpensePaymentStatus(expense)
-        }
-    }
-
-    fun stopRecurrence(groupId: String, currentDueDate: String) {
-        viewModelScope.launch {
-            repository.cancelRecurringExpense(groupId, currentDueDate)
-        }
-    }
-
-    fun updateSettings(investmentPercent: Double, leisurePercent: Double) {
-        viewModelScope.launch {
-            val current = settings.value
-            repository.saveSettings(
+            val ym = _selectedYearMonth.value
+            val ymString = "%04d-%02d".format(ym.year, ym.monthValue)
+            val current = monthlySettings.value ?: MonthlySettings(yearMonth = ymString)
+            repository.updateMonthlySettings(
                 current.copy(
-                    investmentPercentage = investmentPercent,
-                    leisurePercentage = leisurePercent
+                    investmentPercentage = investPercent,
+                    categoryLimitPercentage = catLimitPercent,
+                    categoryLimitName = catLimitName
                 )
             )
         }
     }
 
-    fun updateDefaultCategoryLimit(categoryName: String, percentage: Double) {
+    fun toggleSumWithOtherMonths(accumulate: Boolean) {
         viewModelScope.launch {
-            val current = settings.value
-            repository.saveSettings(
-                current.copy(
-                    categoryLimitName = categoryName,
-                    categoryLimitPercentage = percentage,
-                    leisurePercentage = percentage
-                )
+            val ym = _selectedYearMonth.value
+            val ymString = "%04d-%02d".format(ym.year, ym.monthValue)
+            val current = monthlySettings.value ?: MonthlySettings(yearMonth = ymString)
+            repository.updateMonthlySettings(
+                current.copy(isAccumulatingWithOtherMonths = accumulate)
             )
         }
     }
 
-    fun updateTheme(isDarkMode: Boolean) {
+    fun updateTheme(themeMode: String) {
         viewModelScope.launch {
             val current = settings.value
-            repository.saveSettings(
-                current.copy(
-                    isDarkMode = isDarkMode
-                )
-            )
+            repository.updateFinanceSettings(current.copy(themeMode = themeMode))
         }
     }
 
-    fun updateNotificationsEnabled(enabled: Boolean) {
+    fun updateNotifications(enabled: Boolean) {
         viewModelScope.launch {
             val current = settings.value
-            repository.saveSettings(
-                current.copy(
-                    notificationsEnabled = enabled
-                )
-            )
+            repository.updateFinanceSettings(current.copy(notificationEnabled = enabled))
         }
     }
 
     fun addCategory(name: String) {
         viewModelScope.launch {
-            if (name.isNotBlank()) {
-                repository.addCategory(name)
-            }
+            repository.addCategory(Category(name = name, isCustom = true))
         }
     }
 
@@ -548,17 +275,5 @@ class FinanceViewModel(
         viewModelScope.launch {
             repository.deleteCategory(category)
         }
-    }
-}
-
-class FinanceViewModelFactory(
-    private val repository: FinanceRepository
-) : ViewModelProvider.Factory {
-    @Suppress("UNCHECKED_CAST")
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(FinanceViewModel::class.java)) {
-            return FinanceViewModel(repository) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }

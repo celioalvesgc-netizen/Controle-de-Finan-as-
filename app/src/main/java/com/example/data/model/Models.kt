@@ -2,30 +2,7 @@ package com.example.data.model
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-
-@Entity(tableName = "revenues")
-data class Revenue(
-    @PrimaryKey(autoGenerate = true)
-    val id: Long = 0,
-    val description: String,
-    val amount: Double,
-    val date: String // Format: YYYY-MM-DD
-)
-
-@Entity(tableName = "monthly_revenues")
-data class MonthlyRevenue(
-    @PrimaryKey
-    val month: String, // Format: YYYY-MM
-    val salary: Double = 0.0,
-    val extraIncome: Double = 0.0,
-    val investmentPercentage: Double? = null,
-    val leisurePercentage: Double? = null,
-    val categoryLimitName: String? = null,
-    val categoryLimitPercentage: Double? = null
-) {
-    val totalRevenue: Double
-        get() = salary + extraIncome
-}
+import java.time.LocalDate
 
 @Entity(tableName = "expenses")
 data class Expense(
@@ -33,13 +10,26 @@ data class Expense(
     val id: Long = 0,
     val description: String,
     val amount: Double,
-    val dueDate: String, // Format: YYYY-MM-DD
-    val category: String,
-    val isPaid: Boolean = false, // Always starts as false (PENDENTE)
-    val paidDate: String? = null, // Format: YYYY-MM-DD when paid
-    val recurringGroupId: String? = null, // Links recurring occurrences
-    val recurringIndex: Int = 1, // e.g., 1 of 12
-    val recurringTotal: Int = 1 // e.g., 12, or -1 for until canceled
+    val dueDate: LocalDate,
+    val isPaid: Boolean = false,
+    val paidDate: LocalDate? = null,
+    val category: String = "Geral",
+    val yearMonth: String, // Formato "YYYY-MM"
+    val recurringGroupId: String? = null,
+    val recurringIndex: Int = 1,
+    val recurringTotal: Int = 1, // -1 para mensal contínuo, >1 para parcelamento fixo
+    val notes: String = ""
+)
+
+@Entity(tableName = "revenues")
+data class Revenue(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val description: String,
+    val amount: Double,
+    val date: LocalDate,
+    val yearMonth: String, // Formato "YYYY-MM"
+    val isRecurring: Boolean = false
 )
 
 @Entity(tableName = "categories")
@@ -47,20 +37,31 @@ data class Category(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val name: String,
+    val iconName: String = "Category",
+    val colorHex: String = "#0A6847",
     val isCustom: Boolean = false
 )
 
-@Entity(tableName = "app_settings")
-data class AppSettings(
+@Entity(tableName = "monthly_settings")
+data class MonthlySettings(
+    @PrimaryKey
+    val yearMonth: String, // Formato "YYYY-MM"
+    val investmentPercentage: Double = 10.0,
+    val categoryLimitPercentage: Double = 10.0,
+    val categoryLimitName: String = "Lazer",
+    val isAccumulatingWithOtherMonths: Boolean = false
+)
+
+@Entity(tableName = "finance_settings")
+data class FinanceSettings(
     @PrimaryKey
     val id: Int = 1,
-    val investmentPercentage: Double = 10.0,
-    val leisurePercentage: Double = 10.0,
-    val isDarkMode: Boolean = false,
-    val notificationsEnabled: Boolean = false,
-    val sumWithOtherMonths: Boolean = true,
-    val categoryLimitName: String = "Lazer",
-    val categoryLimitPercentage: Double = 10.0
+    val themeMode: String = "SYSTEM", // "LIGHT", "DARK", "SYSTEM"
+    val notificationEnabled: Boolean = true,
+    val reminderDaysBefore: Int = 2,
+    val defaultInvestmentPercent: Double = 10.0,
+    val defaultCategoryLimitPercent: Double = 10.0,
+    val defaultCategoryLimitName: String = "Lazer"
 )
 
 enum class PaymentStatus {
@@ -71,8 +72,27 @@ enum class PaymentStatus {
 
 enum class ExpenseFilter {
     TODAS,
-    A_PAGAR,
     PAGAS,
-    VENCIDAS,
-    RECEITAS
+    A_PAGAR,
+    VENCIDAS
 }
+
+data class FinanceSummary(
+    val totalRevenue: Double = 0.0,
+    val totalExpenses: Double = 0.0,
+    val totalPaid: Double = 0.0,
+    val totalPending: Double = 0.0,
+    val totalOverdue: Double = 0.0,
+    val investmentPercentage: Double = 10.0,
+    val investmentAllocated: Double = 0.0,
+    val categoryLimitPercentage: Double = 10.0,
+    val categoryLimitName: String = "Lazer",
+    val categoryLimitAmount: Double = 0.0,
+    val categoryLimitSpent: Double = 0.0,
+    val availableBalanceMonth: Double = 0.0,
+    val availableBalancePreviousMonths: Double = 0.0,
+    val availableBalanceTotal: Double = 0.0,
+    val projectedBalanceMonth: Double = 0.0,
+    val projectedBalanceTotal: Double = 0.0,
+    val isAccumulatingWithOtherMonths: Boolean = false
+)
